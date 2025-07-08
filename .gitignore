@@ -1,2 +1,33 @@
+# Generated files
+schedule/generated_strategy.pine
+scheduled_trading_strategy_final.pine
+
+# Archive files
 *.tar.gz
+*.zip
+
+# Claude AI files
 .claude
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log
+
+# Windows specific
+Thumbs.db
+Desktop.ini
+
+# PowerShell execution policy files
+*.ps1xml
+
+# Backup files
+*.bak
+*.backup
+
+# Test files
+schedule/test_*.csv
+schedule/test_*.ps1
+schedule/test_*.pine
