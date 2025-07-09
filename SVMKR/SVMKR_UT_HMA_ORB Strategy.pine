@@ -138,12 +138,12 @@ if buyConfirmed and hasShortPos and allowLong
 
 // 止损逻辑
 if hasLongPos and not na(longStopPrice)
-    if low <= longStopPrice
+    if close <= longStopPrice
         strategy.close("Long", comment="止损")
         longStopPrice := na
 
 if hasShortPos and not na(shortStopPrice)
-    if high >= shortStopPrice
+    if close >= shortStopPrice
         strategy.close("Short", comment="止损")
         shortStopPrice := na
 
