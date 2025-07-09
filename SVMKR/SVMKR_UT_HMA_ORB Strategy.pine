@@ -1,0 +1,219 @@
+//@version=6
+strategy(title="SVMKR_UT_HMA_ORB Strategy", overlay = true, default_qty_type=strategy.fixed, default_qty_value=100, calc_on_every_tick=true)
+
+// Perfect working version 19 - Upgraded to Pine Script v6 - Strategy Version
+
+//----------------------Strategy Settings-----------------------
+qty = input.float(1, title = "开仓数量")
+stopLossPercent = input.float(1.0, title="止损 %", minval=0.1, maxval=10.0, step=0.1)
+signalDelaySeconds = input.int(10, title="信号确认 (秒)", minval=1, maxval=60)
+debugMode = input.bool(false, title = 'debug通知')
+
+//----------------------UT BOT-----------------------
+// Inputs
+a = input.int(2,     title = "UT Key Value. 'This changes the sensitivity'")
+c = input.int(1,    title = "UT ATR Period")
+h = input.bool(false, title = "Signals from Heikin Ashi Candles")
+
+xATR  = ta.atr(c)
+nLoss = a * xATR
+
+src = h ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close) : close
+
+xATRTrailingStop = 0.0
+xATRTrailingStop := if src > nz(xATRTrailingStop[1], 0) and src[1] > nz(xATRTrailingStop[1], 0)
+    math.max(nz(xATRTrailingStop[1]), src - nLoss)
+else if src < nz(xATRTrailingStop[1], 0) and src[1] < nz(xATRTrailingStop[1], 0)
+    math.min(nz(xATRTrailingStop[1]), src + nLoss)
+else if src > nz(xATRTrailingStop[1], 0)
+    src - nLoss
+else
+    src + nLoss
+
+pos = 0
+pos := if src[1] < nz(xATRTrailingStop[1], 0) and src > nz(xATRTrailingStop[1], 0)
+    1
+else if src[1] > nz(xATRTrailingStop[1], 0) and src < nz(xATRTrailingStop[1], 0)
+    -1
+else
+    nz(pos[1], 0)
+
+xcolor = pos == -1 ? color.red: pos == 1 ? color.green : color.blue
+
+ema   = ta.ema(src,1)
+above = ta.crossover(ema, xATRTrailingStop)
+below = ta.crossover(xATRTrailingStop, ema)
+
+buy  = src > xATRTrailingStop and above
+sell = src < xATRTrailingStop and below
+
+barbuy  = src > xATRTrailingStop
+barsell = src < xATRTrailingStop
+
+// 时间确认逻辑
+varip int buySignalTime = 0
+varip int sellSignalTime = 0
+var bool buyConfirmed = false
+var bool sellConfirmed = false
+
+// 记录信号开始时间
+if buy and not buy[1] and buySignalTime == 0
+    if debugMode
+        alert('buy 信号第一出现')
+    buySignalTime := timenow
+    buyConfirmed := false
+if sell and not sell[1] and sellSignalTime == 0
+    if debugMode
+        alert('sell 信号第一出现')
+    sellSignalTime := timenow
+    sellConfirmed := false
+
+// 检查信号持续时间
+currentTime = timenow
+
+if buy and buySignalTime > 0
+    signalDurationMs = currentTime - buySignalTime
+    // log.info('buy comfirm {0}', signalDurationMs)
+    if signalDurationMs >= signalDelaySeconds * 1000
+        // log.info('buy comfirm')
+        buyConfirmed := true
+
+if sell and sellSignalTime > 0
+    signalDurationMs = currentTime - sellSignalTime
+    if signalDurationMs >= signalDelaySeconds * 1000
+        // log.info('sell comfirm')
+        sellConfirmed := true
+
+// 重置确认状态
+if not buy
+    buyConfirmed := false
+    buySignalTime := 0
+if not sell
+    sellConfirmed := false
+    sellSignalTime := 0
+
+plotshape(buy,  title = "Buy Signal",  text = 'Buy',  style = shape.labelup,   location = location.belowbar, color= color.green, textcolor = color.white, size = size.tiny)
+plotshape(sell, title = "Sell Signal", text = 'Sell', style = shape.labeldown, location = location.abovebar, color= color.red,   textcolor = color.white, size = size.tiny)
+plotshape(buyConfirmed,  title = "Buy Confirmed",  text = 'LONG',  style = shape.triangleup,   location = location.belowbar, color= color.lime, textcolor = color.white, size = size.small)
+plotshape(sellConfirmed, title = "Sell Confirmed", text = 'SHORT', style = shape.triangledown, location = location.abovebar, color= color.orange, textcolor = color.white, size = size.small)
+
+//----------------------策略执行逻辑-----------------------
+// 仓位状态
+hasLongPos = strategy.position_size > 0
+hasShortPos = strategy.position_size < 0
+hasNoPos = strategy.position_size == 0
+
+// 止损价格计算
+varip float longStopPrice = na
+varip float shortStopPrice = na
+
+// 开仓逻辑
+if buyConfirmed and hasNoPos
+    strategy.entry("Long", strategy.long, qty = qty, comment="做多")
+    longStopPrice := close * (1 - stopLossPercent / 100)
+
+if sellConfirmed and hasNoPos
+    strategy.entry("Short", strategy.short, qty = qty, comment="做空")
+    shortStopPrice := close * (1 + stopLossPercent / 100)
+
+// 平仓逻辑 - 反向信号
+if sellConfirmed and hasLongPos
+    strategy.close("Long", comment="平多")
+    longStopPrice := na
+
+if buyConfirmed and hasShortPos
+    strategy.close("Short", comment="平空")
+    shortStopPrice := na
+
+// 止损逻辑
+if hasLongPos and not na(longStopPrice)
+    if low <= longStopPrice
+        strategy.close("Long", comment="止损")
+        longStopPrice := na
+
+if hasShortPos and not na(shortStopPrice)
+    if high >= shortStopPrice
+        strategy.close("Short", comment="止损")
+        shortStopPrice := na
+
+// 绘制止损线
+plot(longStopPrice, title="多头止损线", color=color.red, linewidth=1, style=plot.style_stepline)
+plot(shortStopPrice, title="空头止损线", color=color.red, linewidth=1, style=plot.style_stepline)
+
+//----------------------Hull Moving Average-----------------------
+n = input.int(31, title="Hull MA Period")
+
+// HMA Calculation
+n2ma = 2 * ta.wma(close, math.round(n / 2))
+nma = ta.wma(close, n)
+diff = n2ma - nma
+sqn = math.round(math.sqrt(n))
+
+n2ma1 = 2 * ta.wma(close[1], math.round(n / 2))
+nma1 = ta.wma(close[1], n)
+diff1 = n2ma1 - nma1
+sqn1 = math.round(math.sqrt(n))
+
+n1 = ta.wma(diff, sqn)
+n2 = ta.wma(diff1, sqn)
+c1 = n1 > n2 ? color.green : color.red
+
+// Plot HMA
+plot(n1, color = c1, linewidth = 2, title = "HullMA")
+
+// ------------------ Open Range Breakout -------------------------
+
+inputMax = input.int(5, title= "ORB total time (minutes)")
+sess = input.session("1010-1015", title="ORB Session Time")
+t = time(timeframe.period, sess + ":1234567")
+hide = timeframe.isintraday and timeframe.multiplier <= inputMax
+
+is_newbar(res) => ta.change(time(res)) != 0
+in_session = not na(t)
+is_first = in_session and not in_session[1]
+
+var float orb_high = na
+var float orb_low = na
+
+if is_first
+    orb_high := high
+    orb_low := low
+else
+    orb_high := orb_high[1]
+    orb_low := orb_low[1]
+if high > orb_high and in_session
+    orb_high := high
+if low < orb_low and in_session
+    orb_low := low
+
+plot(hide ? orb_high : na , style=plot.style_line, color=orb_high[1] != orb_high ? na : color.green, title="ORB High", linewidth=1)
+plot(hide ? orb_low : na , style=plot.style_line, color=orb_low[1] != orb_low ? na : color.red, title="ORB Low", linewidth=1)
+
+//----------------------UCS_LRS (Commented Out)-----------------------
+// This section was commented out in the original code
+// If you want to enable it, uncomment and update the functions to v6 syntax
+
+//src1 = close
+//
+////Input
+//clen = input.int(50, title = "UCS_LRS Curve Length")
+//slen = input.int(5, title="UCS_LRS Slope Length")
+//glen = input.int(13, title="UCS_LRS Signal Length")
+//
+////Linear Regression Curve
+//lrc = ta.linreg(src1, clen, 0)
+////Linear Regression Slope
+//lrs = (lrc-lrc[1])/1
+////Smooth Linear Regression Slope
+//slrs = ta.ema(lrs, slen)
+////Signal Linear Regression Slope
+//alrs = ta.sma(slrs, glen)
+//
+//uacce = lrs > alrs and lrs > 0
+//dacce = lrs < alrs and lrs < 0
+//
+//scolor = uacce ? color.green : dacce ? color.red : color.blue
+//
+//plot(0, title = "Zero Line", color = color.gray)
+//plot(slrs, color = scolor, title = "Linear Regression Slope", style = plot.style_histogram, linewidth = 3)
+//plot(alrs, color = color.orange, title = "Average Slope", linewidth = 2)
