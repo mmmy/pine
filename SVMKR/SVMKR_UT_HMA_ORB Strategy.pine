@@ -6,14 +6,15 @@ strategy(title="SVMKR_UT_HMA_ORB Strategy", overlay = true, default_qty_type=str
 //----------------------Strategy Settings-----------------------
 qty = input.float(1, title = "开仓数量")
 stopLossPercent = input.float(1.0, title="止损 %", minval=0.1, maxval=10.0, step=0.1)
+tradeDirection = input.string("多空都做", title="交易方向", options=["只做多", "只做空", "多空都做"])
 signalDelaySeconds = input.int(10, title="信号确认 (秒)", minval=1, maxval=60)
-debugMode = input.bool(false, title = 'debug通知')
 
 //----------------------UT BOT-----------------------
 // Inputs
 a = input.int(2,     title = "UT Key Value. 'This changes the sensitivity'")
 c = input.int(1,    title = "UT ATR Period")
 h = input.bool(false, title = "Signals from Heikin Ashi Candles")
+debugMode = input.bool(false, title = 'debug通知')
 
 xATR  = ta.atr(c)
 nLoss = a * xATR
@@ -108,20 +109,30 @@ varip float longStopPrice = na
 varip float shortStopPrice = na
 
 // 开仓逻辑
-if buyConfirmed and hasNoPos
+allowLong = switch tradeDirection
+    "只做多" => true
+    "多空都做" => true
+    => false
+
+allowShort = switch tradeDirection
+    "只做空" => true
+    "多空都做" => true
+    => false
+
+if buyConfirmed and hasNoPos and allowLong
     strategy.entry("Long", strategy.long, qty = qty, comment="做多")
     longStopPrice := close * (1 - stopLossPercent / 100)
 
-if sellConfirmed and hasNoPos
+if sellConfirmed and hasNoPos and allowShort
     strategy.entry("Short", strategy.short, qty = qty, comment="做空")
     shortStopPrice := close * (1 + stopLossPercent / 100)
 
 // 平仓逻辑 - 反向信号
-if sellConfirmed and hasLongPos
+if sellConfirmed and hasLongPos and allowShort
     strategy.close("Long", comment="平多")
     longStopPrice := na
 
-if buyConfirmed and hasShortPos
+if buyConfirmed and hasShortPos and allowLong
     strategy.close("Short", comment="平空")
     shortStopPrice := na
 
