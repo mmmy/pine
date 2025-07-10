@@ -35,7 +35,7 @@ if barstate.isfirst
     
 
 // 跟踪已执行的交易
-var array<bool> tradeExecuted = array.new<bool>()
+varip array<bool> tradeExecuted = array.new<bool>()
 
 // 初始化执行状态数组
 if barstate.isfirst
