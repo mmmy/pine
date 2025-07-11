@@ -6,29 +6,29 @@ debugMode = input.bool(false, title="Debug Mode")
 enableStrategy = input.bool(true, title="Enable Strategy")
 
 // 交易信号定义
-// 1 = 买入, -1 = 卖出, 0 = 无操作
+// 做多 = 开多仓, 平多 = 平多仓, 做空 = 开空仓, 平空 = 平空仓
 var array<int> tradeTimes = array.new<int>()
-var array<int> tradeSignals = array.new<int>()
+var array<string> tradeSignals = array.new<string>()
 var array<float> tradeSizes = array.new<float>()
 
 // 初始化交易数组 - 用户可以在这里配置交易计划
 // 时间格式: timestamp (可以通过 timestamp("2024-01-01 09:30:00") 获取)
-// 信号: 1=买入, -1=卖出
+// 信号: "做多"=开多仓, "平多"=平多仓, "做空"=开空仓, "平空"=平空仓
 // 仓位大小: 正数表示数量
 
 // 示例交易计划 - 用户需要根据实际需求修改这些值
 if barstate.isfirst
     // 添加交易计划
-    // 格式: 时间戳, 买卖信号(1/-1), 仓位大小
+    // 格式: 时间戳, 买卖信号(中文), 仓位大小
     
-    // 示例1: 2024-01-02 09:30:00 买入 100 股
+    // 示例1: 2024-01-02 09:30:00 做多 100 股
     // array.push(tradeTimes, timestamp("2025-07-08 09:30:00 GMT+8"))
-    // array.push(tradeSignals, 1)
+    // array.push(tradeSignals, "做多")
     // array.push(tradeSizes, 100.0)
     
-    // 示例2: 2024-01-02 15:30:00 卖出 50 股
+    // 示例2: 2024-01-02 15:30:00 平多 50 股
     // array.push(tradeTimes, timestamp("2025-07-08 12:30:00 GMT+8"))
-    // array.push(tradeSignals, -1)
+    // array.push(tradeSignals, "平多")
     // array.push(tradeSizes, 50.0)
 
     {{template}}
@@ -54,38 +54,48 @@ if enableStrategy
             size = array.get(tradeSizes, i)
             
             // 检查当前时间是否已经穿过目标时间
-            if timenow >= targetTime
+            if time >= targetTime
                 // 执行交易
-                if signal == 1  // 买入
+                if signal == "做多"  // 做多
                     if debugMode
-                        log.info("执行买入订单: 时间={0}, 数量={1}", targetTime, size)
-                    strategy.entry("Long_" + str.tostring(i), strategy.long, qty=size, comment="定时买入")
+                        log.info("执行做多订单: 时间={0}, 数量={1}", targetTime, size)
+                    strategy.order("Long_" + str.tostring(i), strategy.long, qty=size, comment="#" + str.tostring(i + 1) + " " + "定时做多 " +  str.format_time(targetTime, timezone = 'UTC+8'))
                     
-                else if signal == -1  // 卖出
+                else if signal == "平多"  // 平多
                     if debugMode
-                        log.info("执行卖出订单: 时间={0}, 数量={1}", targetTime, size)
+                        log.info("执行平多订单: 时间={0}, 数量={1}", targetTime, size)
                     
-                    // 如果有多头仓位，先平仓
+                    // 平多：关闭多头仓位
                     if strategy.position_size > 0
                         closeSize = math.min(size, strategy.position_size)
-                        strategy.close_all(comment="定时平仓")
+                        strategy.order("Close_Long_" + str.tostring(i), strategy.short, qty=closeSize, comment="#" + str.tostring(i + 1) + " " + "定时平多 " + str.format_time(targetTime, timezone = 'UTC+8'))
                         
-                        // 如果卖出数量大于持仓，开空仓
-                        if size > strategy.position_size
-                            remainingSize = size - strategy.position_size
-                            strategy.entry("Short_" + str.tostring(i), strategy.short, qty=remainingSize, comment="定时做空")
-                    else
-                        // 没有多头仓位，直接开空仓
-                        strategy.entry("Short_" + str.tostring(i), strategy.short, qty=size, comment="定时做空")
+                else if signal == "做空"  // 做空
+                    if debugMode
+                        log.info("执行做空订单: 时间={0}, 数量={1}", targetTime, size)
+                    strategy.order("Short_" + str.tostring(i), strategy.short, qty=size, comment="#" + str.tostring(i + 1) + " " + "定时做空 " + str.format_time(targetTime, timezone = 'UTC+8'))
+                    
+                else if signal == "平空"  // 平空
+                    if debugMode
+                        log.info("执行平空订单: 时间={0}, 数量={1}", targetTime, size)
+                    
+                    // 平空：关闭空头仓位
+                    if strategy.position_size < 0
+                        closeSize = math.min(size, math.abs(strategy.position_size))
+                        strategy.order("Close_Short_" + str.tostring(i), strategy.long, qty=closeSize, comment="#" + str.tostring(i + 1) + " " + "定时平空 " + str.format_time(targetTime, timezone = 'UTC+8'))
                 
                 // 标记为已执行
                 array.set(tradeExecuted, i, true)
                 
                 // 在图表上显示执行点
-                if signal == 1
-                    label.new(bar_index, low, "买入\n" + str.tostring(size), color=color.green, style=label.style_label_up, size=size.small)
-                else if signal == -1
-                    label.new(bar_index, high, "卖出\n" + str.tostring(size), color=color.red, style=label.style_label_down, size=size.small)
+                if signal == "做多"
+                    label.new(bar_index, low, "做多\n" + str.tostring(size), color=color.green, style=label.style_label_up, size=size.small)
+                else if signal == "平多"
+                    label.new(bar_index, high, "平多\n" + str.tostring(size), color=color.lime, style=label.style_label_down, size=size.small)
+                else if signal == "做空"
+                    label.new(bar_index, high, "做空\n" + str.tostring(size), color=color.red, style=label.style_label_down, size=size.small)
+                else if signal == "平空"
+                    label.new(bar_index, low, "平空\n" + str.tostring(size), color=color.orange, style=label.style_label_up, size=size.small)
 
 // 显示策略状态
 var table infoTable = table.new(position.top_right, 2, 6, bgcolor=color.white, border_width=1)

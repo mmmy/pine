@@ -87,11 +87,10 @@ try {
             # Handle different timezone formats (+08:00, +08:01, etc.)
             $timeFormatted = $time -replace '\+08:\d{2}', ' GMT+8'
 
-            # Generate Pine Script code
-            $directionText = if($direction -eq "1") {"Buy"} else {"Sell"}
-            $pineScriptLines += "    // Trading time: $time, Direction: $directionText, Quantity: $quantity"
+            # Generate Pine Script code - use original Chinese direction
+            $pineScriptLines += "    // Trading time: $time, Direction: $direction, Quantity: $quantity"
             $pineScriptLines += "    array.push(tradeTimes, timestamp(`"$timeFormatted`"))"
-            $pineScriptLines += "    array.push(tradeSignals, $direction)"
+            $pineScriptLines += "    array.push(tradeSignals, `"$direction`")"
             $pineScriptLines += "    array.push(tradeSizes, $quantity.0)"
             $pineScriptLines += ""
         }
@@ -146,8 +145,17 @@ try {
             $time = $parts[0].Trim()
             $direction = $parts[1].Trim()
             $quantity = $parts[2].Trim()
-            $directionText = if($direction -eq "1") {"Buy"} else {"Sell"}
-            $emoji = if($direction -eq "1") {"📈"} else {"📉"}
+            $directionText = ""
+            $emoji = ""
+            
+            switch ($direction) {
+                "做多" { $directionText = "Long"; $emoji = "📈" }
+                "平多" { $directionText = "Close Long"; $emoji = "📉" }
+                "做空" { $directionText = "Short"; $emoji = "📉" }
+                "平空" { $directionText = "Close Short"; $emoji = "📈" }
+                default { $directionText = "Unknown"; $emoji = "?" }
+            }
+            
             Write-Host "$emoji $time - $directionText $quantity shares" -ForegroundColor White
         }
     }
