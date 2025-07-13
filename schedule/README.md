@@ -18,7 +18,8 @@ schedule/
 ├── README.md                          # 本指南
 ├── QUICK_START.md                     # 快速开始指南
 ├── 使用教程.md                        # 中文详细教程
-└── 故障排除.md                        # 故障排除指南
+├── 故障排除.md                        # 故障排除指南
+└── 流程图说明.md                      # 详细流程图文档
 ```
 
 ## 🚀 快速开始
@@ -90,11 +91,17 @@ powershell.exe -ExecutionPolicy Bypass -File "generate_strategy.ps1"
 - 生成Pine Script数组推送语句
 - 替换模板中的 `{{template}}` 占位符
 
+### ✅ 编码兼容性
+- 自动处理UTF-8编码的CSV文件
+- 智能识别中文交易方向（做多、平多、做空、平空）
+- 增强的Unicode字符匹配，解决编码问题
+- 详细的调试信息，便于问题定位
+
 ### ✅ 输出生成
 - 在schedule文件夹中创建 `generated_strategy.pine`
-- 复制文件到根目录作为 `scheduled_trading_strategy_final.pine`
 - 自动复制内容到剪贴板
 - 显示详细的进度和摘要
+- 生成完整的交易计划预览
 
 ## 📝 逐步处理过程
 
@@ -222,6 +229,12 @@ flowchart TD
 **中文字符显示问题**
 - 确保您的PowerShell支持UTF-8编码
 - 尝试从命令提示符运行
+- 检查CSV文件是否为UTF-8编码保存
+
+**方向识别问题**
+- 确保CSV文件中的方向字段为：做多、平多、做空、平空
+- 避免在方向字段中包含额外的空格或特殊字符
+- 如果问题持续，脚本会显示Unicode调试信息
 
 ### 文件权限：
 - 确保您在schedule文件夹中有写权限
@@ -252,18 +265,18 @@ Step 2: Checking input files...
 ✓ Template file found: scheduled_trading_strategy.template
 
 Step 3: Processing CSV data...
+  ℹ Normalized time format to: 2025-07-08 09:30:00
+  ℹ Added timezone +08:00 to: 2025-07-08 09:30:00+08:00
 ✓ Found 3 trading records
 
 Step 4: Generating Pine Script code...
 ✓ Generated file: generated_strategy.pine
-✓ Copied to root directory: ..\scheduled_trading_strategy_final.pine
 
 Step 5: Copying to clipboard...
 ✓ Content copied to clipboard
 
-Step 6: Summary
+Step 5: Summary
 ✓ Strategy file generated: generated_strategy.pine
-✓ Root file updated: ..\scheduled_trading_strategy_final.pine
 ✓ Content copied to clipboard
 ✓ Processed 3 trading records
 ✓ File size: 4250 bytes
@@ -289,7 +302,10 @@ You can now paste it directly into TradingView.
 修改CSV处理部分以处理额外的列，如止损、止盈等。
 
 ### 更改输出位置：
-更新脚本中的 `$OutputPath` 和 `$RootFinalFile` 变量。
+更新脚本中的 `$OutputPath` 变量。
+
+### 自定义时区配置：
+修改脚本中的默认时区设置，或在运行时输入不同的时区偏移量。
 
 ## 📞 技术支持
 
@@ -305,6 +321,7 @@ You can now paste it directly into TradingView.
 - **`QUICK_START.md`** - 快速开始指南
 - **`使用教程.md`** - 详细使用教程
 - **`故障排除.md`** - 故障排除指南
+- **`流程图说明.md`** - 详细的系统流程图和架构说明
 
 ## 🔄 版本历史
 
@@ -313,3 +330,5 @@ You can now paste it directly into TradingView.
 - **v1.2**：改进错误处理和英语语言支持
 - **v1.3**：添加全面的日志记录和状态报告
 - **v1.4**：添加中文文档和改进的用户界面
+- **v1.5**：添加用户自定义时区功能
+- **v1.6**：改进编码兼容性，修复中文方向识别问题
