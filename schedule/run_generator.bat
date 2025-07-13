@@ -17,7 +17,9 @@ echo.
 echo Starting generator...
 echo.
 
-powershell.exe -ExecutionPolicy Bypass -File "generate_strategy.ps1"
+chcp 65001 >nul
+powershell.exe -NoProfile -Command "(Get-Content -Path .\generate_strategy.ps1 -Raw) | Set-Content -Path .\generate_strategy.ps1 -Encoding utf8 -Force"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; . '.\generate_strategy.ps1' }"
 
 echo.
 if %ERRORLEVEL% EQU 0 (

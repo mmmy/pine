@@ -1,3 +1,5 @@
+$PSDefaultParameterValues = @{'*:Encoding' = 'utf8'}
+
 # PowerShell Script: Replace trading_orders.csv data into scheduled_trading_strategy.template
 # Function: Read CSV trading data, replace template placeholders, generate Pine Script strategy file and copy to clipboard
 # Date: 2025-07-08
@@ -24,6 +26,29 @@ if (Test-Path $OutputPath) {
 } else {
     Write-Host "✓ No old file to delete: $OutputPath" -ForegroundColor Green
 }
+
+Write-Host ""
+
+# Get timezone input from user
+Write-Host "时区配置:" -ForegroundColor Yellow
+$timezoneInput = Read-Host "请输入时区偏移量 (默认为8表示东8区，直接回车使用默认值)"
+if ([string]::IsNullOrEmpty($timezoneInput)) {
+    $timezone = 8
+} else {
+    try {
+        $timezone = [int]$timezoneInput
+        if ($timezone -lt -12 -or $timezone -gt 14) {
+            Write-Host "错误: 时区必须在-12到+14之间" -ForegroundColor Red
+            exit 1
+        }
+    } catch {
+        Write-Host "错误: 时区输入无效，请输入数字" -ForegroundColor Red
+        exit 1
+    }
+}
+$timezoneStr = if ($timezone -ge 0) { "+{0:D2}:00" -f $timezone } else { "-{0:D2}:00" -f [Math]::Abs($timezone) }
+$timezoneGMT = if ($timezone -ge 0) { "GMT+$timezone" } else { "GMT$timezone" }
+Write-Host "✓ 使用时区: $timezoneGMT ($timezoneStr)" -ForegroundColor Green
 
 Write-Host ""
 
@@ -77,15 +102,15 @@ try {
                 Write-Host "  ℹ Normalized time format to: $time" -ForegroundColor Cyan
             }
 
-            # If no timezone info, add default +08:00 (East 8 timezone)
+            # If no timezone info, add user specified timezone
             if ($time -notmatch '\+\d{2}:\d{2}$') {
-                $time = $time + "+08:00"
-                Write-Host "  ℹ Added default timezone +08:00 to: $time" -ForegroundColor Cyan
+                $time = $time + $timezoneStr
+                Write-Host "  ℹ Added timezone $timezoneStr to: $time" -ForegroundColor Cyan
             }
 
             # Convert time format: from "2025-07-08 09:30:00+08:00" to "2025-07-08 09:30:00 GMT+8"
-            # Handle different timezone formats (+08:00, +08:01, etc.)
-            $timeFormatted = $time -replace '\+08:\d{2}', ' GMT+8'
+            # Handle different timezone formats
+            $timeFormatted = $time -replace '[\+\-]\d{2}:\d{2}', " $timezoneGMT"
 
             # Generate Pine Script code - use original Chinese direction
             $pineScriptLines += "    // Trading time: $time, Direction: $direction, Quantity: $quantity"
