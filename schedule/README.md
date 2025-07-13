@@ -32,7 +32,8 @@ schedule/
 ### 方法2：使用PowerShell
 1. 在 `schedule` 文件夹中打开PowerShell
 2. 运行：`powershell.exe -ExecutionPolicy Bypass -File "generate_strategy.ps1"`
-3. 按照屏幕提示操作
+3. 输入时区偏移量（默认为 GMT+8，直接回车使用默认值）
+4. 按照屏幕提示操作
 
 ### 方法3：使用命令提示符
 ```cmd
@@ -53,7 +54,7 @@ powershell.exe -ExecutionPolicy Bypass -File "generate_strategy.ps1"
 ```
 
 ### 列定义：
-- **时间**：交易时间，格式为 `YYYY-MM-DD HH:MM:SS`（无需时区信息）
+- **时间**：交易时间，格式为 `YYYY-MM-DD HH:MM:SS`（脚本会根据用户输入添加时区信息）
 - **方向**：`做多` = 开多头仓位，`平多` = 平多头仓位，`做空` = 开空头仓位，`平空` = 平空头仓位
 - **数量**：要交易的股数/单位数
 
@@ -77,9 +78,15 @@ powershell.exe -ExecutionPolicy Bypass -File "generate_strategy.ps1"
 - 如果文件缺失提供清晰的错误信息
 - 验证文件可访问性
 
+### ✅ 时区配置
+- 支持用户自定义时区设置
+- 默认使用 GMT+8 时区
+- 支持 GMT-12 到 GMT+14 范围内的所有时区
+- 自动为缺少时区信息的时间添加指定时区
+
 ### ✅ 数据处理
 - 读取CSV数据并跳过标题行
-- 时间格式处理：处理标准时间格式（无需时区信息）
+- 时间格式处理：处理标准时间格式并添加用户指定时区
 - 生成Pine Script数组推送语句
 - 替换模板中的 `{{template}}` 占位符
 
@@ -94,11 +101,12 @@ powershell.exe -ExecutionPolicy Bypass -File "generate_strategy.ps1"
 运行脚本时，它会执行以下步骤：
 
 1. **第1步：清理** - 删除旧的生成文件
-2. **第2步：验证** - 检查输入文件是否存在
-3. **第3步：数据处理** - 读取和处理CSV数据
-4. **第4步：代码生成** - 创建Pine Script代码
-5. **第5步：剪贴板复制** - 将结果复制到剪贴板
-6. **第6步：摘要** - 显示完成状态和文件信息
+2. **第2步：时区配置** - 获取用户时区设置（默认GMT+8）
+3. **第3步：验证** - 检查输入文件是否存在
+4. **第4步：数据处理** - 读取和处理CSV数据，添加时区信息
+5. **第5步：代码生成** - 创建Pine Script代码
+6. **第6步：剪贴板复制** - 将结果复制到剪贴板
+7. **第7步：摘要** - 显示完成状态和文件信息
 
 ## 🎯 在TradingView中使用
 
@@ -234,6 +242,10 @@ Output file: generated_strategy.pine
 Step 1: Cleaning up old generated files...
 ✓ Deleted old file: generated_strategy.pine
 ✓ Deleted old root file: ..\scheduled_trading_strategy_final.pine
+
+Timezone Configuration:
+Enter timezone offset (default is 8 for GMT+8, press Enter for default): 8
+✓ Using timezone: GMT+8 (+08:00)
 
 Step 2: Checking input files...
 ✓ CSV file found: trading_orders.csv

@@ -30,25 +30,25 @@ if (Test-Path $OutputPath) {
 Write-Host ""
 
 # Get timezone input from user
-Write-Host "时区配置:" -ForegroundColor Yellow
-$timezoneInput = Read-Host "请输入时区偏移量 (默认为8表示东8区，直接回车使用默认值)"
+Write-Host "Timezone Configuration:" -ForegroundColor Yellow
+$timezoneInput = Read-Host "Enter timezone offset (default is 8 for GMT+8, press Enter for default)"
 if ([string]::IsNullOrEmpty($timezoneInput)) {
     $timezone = 8
 } else {
     try {
         $timezone = [int]$timezoneInput
         if ($timezone -lt -12 -or $timezone -gt 14) {
-            Write-Host "错误: 时区必须在-12到+14之间" -ForegroundColor Red
+            Write-Host "Error: Timezone must be between -12 and +14" -ForegroundColor Red
             exit 1
         }
     } catch {
-        Write-Host "错误: 时区输入无效，请输入数字" -ForegroundColor Red
+        Write-Host "Error: Invalid timezone input, please enter a number" -ForegroundColor Red
         exit 1
     }
 }
 $timezoneStr = if ($timezone -ge 0) { "+{0:D2}:00" -f $timezone } else { "-{0:D2}:00" -f [Math]::Abs($timezone) }
 $timezoneGMT = if ($timezone -ge 0) { "GMT+$timezone" } else { "GMT$timezone" }
-Write-Host "✓ 使用时区: $timezoneGMT ($timezoneStr)" -ForegroundColor Green
+Write-Host "✓ Using timezone: $timezoneGMT ($timezoneStr)" -ForegroundColor Green
 
 Write-Host ""
 
@@ -173,12 +173,19 @@ try {
             $directionText = ""
             $emoji = ""
             
+            # Clean direction text of any hidden characters
+            $direction = $direction.Trim().Replace("`r", "").Replace("`n", "")
+            
             switch ($direction) {
                 "做多" { $directionText = "Long"; $emoji = "📈" }
                 "平多" { $directionText = "Close Long"; $emoji = "📉" }
                 "做空" { $directionText = "Short"; $emoji = "📉" }
                 "平空" { $directionText = "Close Short"; $emoji = "📈" }
-                default { $directionText = "Unknown"; $emoji = "?" }
+                default { 
+                    $directionText = "Unknown ($direction)"; 
+                    $emoji = "?" 
+                    Write-Host "  ⚠ Unknown direction: '$direction' (length: $($direction.Length))" -ForegroundColor Yellow
+                }
             }
             
             Write-Host "$emoji $time - $directionText $quantity shares" -ForegroundColor White
