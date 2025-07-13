@@ -176,15 +176,24 @@ try {
             # Clean direction text of any hidden characters
             $direction = $direction.Trim().Replace("`r", "").Replace("`n", "")
             
+            # Direct string comparison with explicit Unicode values
             switch ($direction) {
-                "做多" { $directionText = "Long"; $emoji = "📈" }
-                "平多" { $directionText = "Close Long"; $emoji = "📉" }
-                "做空" { $directionText = "Short"; $emoji = "📉" }
-                "平空" { $directionText = "Close Short"; $emoji = "📈" }
+                { $_ -eq "做多" -or $_ -eq ([char]0x505a + [char]0x591a) } { 
+                    $directionText = "Long"; $emoji = "📈" 
+                }
+                { $_ -eq "平多" -or $_ -eq ([char]0x5e73 + [char]0x591a) } { 
+                    $directionText = "Close Long"; $emoji = "📉" 
+                }
+                { $_ -eq "做空" -or $_ -eq ([char]0x505a + [char]0x7a7a) } { 
+                    $directionText = "Short"; $emoji = "📉" 
+                }
+                { $_ -eq "平空" -or $_ -eq ([char]0x5e73 + [char]0x7a7a) } { 
+                    $directionText = "Close Short"; $emoji = "📈" 
+                }
                 default { 
-                    $directionText = "Unknown ($direction)"; 
-                    $emoji = "?" 
-                    Write-Host "  ⚠ Unknown direction: '$direction' (length: $($direction.Length))" -ForegroundColor Yellow
+                    $directionText = "Unknown"
+                    $emoji = "?"
+                    Write-Host "  ⚠ Unknown direction: '$direction' (Unicode: $([System.Text.Encoding]::UTF8.GetBytes($direction) -join ' '))" -ForegroundColor Yellow
                 }
             }
             
