@@ -33,3 +33,4 @@ schedule/test_*.ps1
 schedule/test_*.pine
 
 schedule/generated_strategy.pine
+GIT_STATUS.md
