@@ -1,0 +1,234 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © gouge99
+
+//@version=6
+strategy("MT5 strategy", overlay=true, calc_on_every_tick=true)
+
+// 交易设置
+tradingGroup = '交易设置'
+strategyStartTime = input.time(timestamp("2025-07-15 00:00:00"), "策略开始时间", group=tradingGroup)
+tradingDirection = input.string("做多", "交易方向", options=["做多", "做空"], group=tradingGroup)
+positionSize = input.float(1.0, "开仓数量", minval=0.01, group=tradingGroup)
+resistanceLevel = input.price(0.0, "阻力位价格", group=tradingGroup, tooltip="大于0才生效")
+minBodySize = input.float(1.0, "最小实体长度", group=tradingGroup)
+enableSpinningTopSignal = input.bool(true, "启用纺锤线信号开仓", group=tradingGroup)
+
+// 时间设置
+timeGroup = '时间设置'
+timezone = input.string("GMT+8", "时区", options=["GMT-12", "GMT-11", "GMT-10", "GMT-9", "GMT-8", "GMT-7", "GMT-6", "GMT-5", "GMT-4", "GMT-3", "GMT-2", "GMT-1", "GMT+0", "GMT+1", "GMT+2", "GMT+3", "GMT+4", "GMT+5", "GMT+6", "GMT+7", "GMT+8", "GMT+9", "GMT+10", "GMT+11", "GMT+12"], group=timeGroup)
+enableSession1 = input.bool(true, "启用", group=timeGroup, inline="session1")
+timeSession1 = input.session("0800-1200", "交易时间段1", group=timeGroup, inline="session1")
+enableSession2 = input.bool(true, "启用", group=timeGroup, inline="session2")
+timeSession2 = input.session("1300-1700", "交易时间段2", group=timeGroup, inline="session2")
+enableSession3 = input.bool(true, "启用", group=timeGroup, inline="session3")
+timeSession3 = input.session("1900-2300", "交易时间段3", group=timeGroup, inline="session3")
+enableSession4 = input.bool(true, "启用", group=timeGroup, inline="session4")
+timeSession4 = input.session("0000-0600", "交易时间段4", group=timeGroup, inline="session4")
+
+// 输入参数设置
+infoLabal = '显示设置'
+showSpinInfo = input.bool(false, title = '显示纺锤线', group = infoLabal)
+label_color_neutral = input(color.gray, "Label Color Neutral", group = infoLabal)
+showTimeBackground = input.bool(false, "显示有效时间区间背景", group = infoLabal)
+showResistanceLevel = input.bool(true, "显示阻力位线", group = infoLabal)
+showStrategyNotice = input.bool(true, "显示策略提示信息", group = infoLabal)
+
+// 纺锤线计算
+C_Len = 14 // ta.ema depth for bodyAvg
+C_ShadowPercent = 5.0 // size of shadows
+C_ShadowEqualsPercent = 100.0
+C_DojiBodyPercent = 5.0
+C_Factor = 2.0 // shows the number of times the shadow dominates the candlestick body
+
+C_BodyHi = math.max(close, open)
+C_BodyLo = math.min(close, open)
+C_Body = C_BodyHi - C_BodyLo
+C_BodyAvg = ta.ema(C_Body, C_Len)
+C_SmallBody = C_Body < C_BodyAvg
+C_LongBody = C_Body > C_BodyAvg
+C_UpShadow = high - C_BodyHi
+C_DnShadow = C_BodyLo - low
+C_HasUpShadow = C_UpShadow > C_ShadowPercent / 100 * C_Body
+C_HasDnShadow = C_DnShadow > C_ShadowPercent / 100 * C_Body
+C_WhiteBody = open < close
+C_BlackBody = open > close
+C_Range = high-low
+C_IsInsideBar = C_BodyHi[1] > C_BodyHi and C_BodyLo[1] < C_BodyLo
+C_BodyMiddle = C_Body / 2 + C_BodyLo
+C_ShadowEquals = C_UpShadow == C_DnShadow or (math.abs(C_UpShadow - C_DnShadow) / C_DnShadow * 100) < C_ShadowEqualsPercent and (math.abs(C_DnShadow - C_UpShadow) / C_UpShadow * 100) < C_ShadowEqualsPercent
+C_IsDojiBody = C_Range > 0 and C_Body <= C_Range * C_DojiBodyPercent / 100
+C_Doji = C_IsDojiBody and C_ShadowEquals
+
+patternLabelPosLow = low - (ta.atr(30) * 0.6)
+patternLabelPosHigh = high + (ta.atr(30) * 0.6)
+C_SpinningTopWhiteNumberOfCandles = 1
+C_SpinningTopWhitePercent = 34.0
+C_IsSpinningTopWhite = C_DnShadow >= C_Range / 100 * C_SpinningTopWhitePercent and C_UpShadow >= C_Range / 100 * C_SpinningTopWhitePercent and not C_IsDojiBody
+// 白色纺锤线
+C_SpinningTopWhite = C_IsSpinningTopWhite and C_WhiteBody
+if showSpinInfo and C_SpinningTopWhite
+    var ttSpinningTopWhite = "Spinning Top White\nWhite spinning tops are candlestick lines that are small, green-bodied, and possess shadows (upper and lower) that end up exceeding the length of candle bodies. They often signal indecision between buyer and seller."
+    label.new(bar_index, patternLabelPosLow, text="STW", style=label.style_label_up, color = label_color_neutral, textcolor=color.white, tooltip = ttSpinningTopWhite)
+
+C_SpinningTopBlackNumberOfCandles = 1
+C_SpinningTopBlackPercent = 34.0
+C_IsSpinningTop = C_DnShadow >= C_Range / 100 * C_SpinningTopBlackPercent and C_UpShadow >= C_Range / 100 * C_SpinningTopBlackPercent and not C_IsDojiBody
+// 黑色纺锤线
+C_SpinningTopBlack = C_IsSpinningTop and C_BlackBody
+if showSpinInfo and C_SpinningTopBlack
+    var ttSpinningTopBlack = "Spinning Top Black\nBlack spinning tops are candlestick lines that are small, red-bodied, and possess shadows (upper and lower) that end up exceeding the length of candle bodies. They often signal indecision."
+    label.new(bar_index, patternLabelPosLow, text="STB", style=label.style_label_up, color = label_color_neutral, textcolor=color.white, tooltip = ttSpinningTopBlack)
+
+bsSTW = ta.barssince(C_SpinningTopWhite)
+bsTTB = ta.barssince(C_SpinningTopBlack)
+
+// 时间条件检查
+isInTradingSession() =>
+    session1 = enableSession1 ? time(timeframe.period, timeSession1, timezone) : na
+    session2 = enableSession2 ? time(timeframe.period, timeSession2, timezone) : na
+    session3 = enableSession3 ? time(timeframe.period, timeSession3, timezone) : na
+    session4 = enableSession4 ? time(timeframe.period, timeSession4, timezone) : na
+    not na(session1) or not na(session2) or not na(session3) or not na(session4)
+
+bgcolor(showTimeBackground and isInTradingSession() ? color.new(color.blue, 95) : na)
+
+// 绘制阻力位线
+var line resistanceLine = na
+var label resistanceLabel = na
+if showResistanceLevel and resistanceLevel > 0 and time >= strategyStartTime and na(resistanceLine)
+    resistanceLine := line.new(bar_index, resistanceLevel, bar_index + 1, resistanceLevel, 
+                              color=color.red, style=line.style_dashed, width=2, extend=extend.right)
+    resistanceLabel := label.new(bar_index, resistanceLevel, "阻力位: " + str.tostring(resistanceLevel), 
+                                  style=label.style_arrowup, color=color.red, textcolor=color.white, size=size.normal)
+// 检查是否在每小时的最后10分钟
+isLastTenMinutes() =>
+    currentMinute = minute(time)
+    currentMinute >= 50
+
+// 时间条件满足
+timeConditionMet = isInTradingSession() and not isLastTenMinutes() and time >= strategyStartTime
+
+// 纺锤线状态判断：使用barssince来判断最近的纺锤线类型
+// 做多：黑色纺锤线之后，出现白色纺锤线之前
+// 做空：白色纺锤线之后，出现黑色纺锤线之前
+isAfterBlackSpinBeforeWhite = bsTTB < bsSTW or (bsTTB >= 0 and na(bsSTW))
+isAfterWhiteSpinBeforeBlack = bsSTW < bsTTB or (bsSTW >= 0 and na(bsTTB))
+
+// 做多条件
+longCondition1 = false
+longCondition2 = false
+
+// 做多条件1：压力位突破
+if resistanceLevel > 0
+    bodyLength = close - open
+    hasNoLowerShadow = open == low
+    bodyAboveResistance = open < resistanceLevel and (close - resistanceLevel) / (close - open) > 2/3
+    longCondition1 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and bodyAboveResistance and timeConditionMet
+
+// 做多条件2：纺锤线做多
+if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
+    bodyLength = close - open
+    hasNoLowerShadow = open == low
+    longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and timeConditionMet
+
+// 做空条件
+shortCondition1 = false
+shortCondition2 = false
+
+// 做空条件1：压力位做空
+if resistanceLevel > 0
+    bodyLength = open - close
+    hasNoUpperShadow = open == high
+    bodyBelowResistance = open > resistanceLevel and (close - resistanceLevel) / (close - open) > 2/3
+    shortCondition1 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and bodyBelowResistance and timeConditionMet
+
+// 做空条件2：纺锤线做空
+if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
+    bodyLength = open - close
+    hasNoUpperShadow = open == high
+    shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and timeConditionMet
+
+// 根据交易方向设置执行交易
+canLong = tradingDirection == "做多"
+canShort = tradingDirection == "做空"
+
+if barstate.isconfirmed
+    // 执行交易
+    if canLong and longCondition1
+        strategy.entry("Long", strategy.long, qty=positionSize, comment="压力位做多")
+
+    if canLong and longCondition2 and enableSpinningTopSignal
+        strategy.entry("Long", strategy.long, qty=positionSize, comment="纺锤线做多")
+
+    if canShort and shortCondition1
+        strategy.entry("Short", strategy.short, qty=positionSize, comment="压力位做空")
+
+    if canShort and shortCondition2 and enableSpinningTopSignal
+        strategy.entry("Short", strategy.short, qty=positionSize, comment="纺锤线做空")
+
+// 仓位信息表格
+var table positionTable = table.new(position.top_right, 2, 6, bgcolor=color.white, border_width=1)
+
+if barstate.islast
+    // 获取当前仓位信息
+    currentPosition = strategy.position_size
+    entryPrice = strategy.position_avg_price
+    unrealizedPnL = strategy.openprofit
+
+    // 获取开仓时间
+    entryTime = strategy.opentrades > 0 ? strategy.opentrades.entry_time(0) : na
+
+    // 表格标题
+    table.cell(positionTable, 0, 0, "仓位信息", text_color=color.black, bgcolor=color.gray, text_size=size.normal)
+    table.cell(positionTable, 1, 0, "", text_color=color.black, bgcolor=color.gray)
+
+    // 当前仓位
+    table.cell(positionTable, 0, 1, "当前仓位", text_color=color.black, bgcolor=color.white)
+    positionText = currentPosition == 0 ? "无仓位" :
+                   currentPosition > 0 ? "多头 " + str.tostring(math.abs(currentPosition)) :
+                   "空头 " + str.tostring(math.abs(currentPosition))
+    positionColor = currentPosition == 0 ? color.gray :
+                      currentPosition > 0 ? color.green : color.red
+    table.cell(positionTable, 1, 1, positionText, text_color=positionColor, bgcolor=color.white)
+
+    // 如果有仓位，显示详细信息
+    if currentPosition != 0
+        // 开仓价格
+        table.cell(positionTable, 0, 2, "开仓价格", text_color=color.black, bgcolor=color.white)
+        table.cell(positionTable, 1, 2, str.tostring(entryPrice, "#.####"), text_color=color.black, bgcolor=color.white)
+
+        // 开仓时间
+        table.cell(positionTable, 0, 3, "开仓时间", text_color=color.black, bgcolor=color.white)
+        timeStr = not na(entryTime) ? str.format_time(entryTime, "yyyy-MM-dd HH:mm", timezone) : "N/A"
+        table.cell(positionTable, 1, 3, timeStr, text_color=color.black, bgcolor=color.white)
+
+        // 未实现盈亏
+        table.cell(positionTable, 0, 4, "未实现盈亏", text_color=color.black, bgcolor=color.white)
+        pnlColor = unrealizedPnL > 0 ? color.green : unrealizedPnL < 0 ? color.red : color.gray
+        pnlText = str.tostring(unrealizedPnL, "#.##")
+        table.cell(positionTable, 1, 4, pnlText, text_color=pnlColor, bgcolor=color.white)
+    else
+        // 无仓位时显示空行
+        table.cell(positionTable, 0, 2, "", text_color=color.black, bgcolor=color.white)
+        table.cell(positionTable, 1, 2, "", text_color=color.black, bgcolor=color.white)
+        table.cell(positionTable, 0, 3, "", text_color=color.black, bgcolor=color.white)
+        table.cell(positionTable, 1, 3, "", text_color=color.black, bgcolor=color.white)
+        table.cell(positionTable, 0, 4, "", text_color=color.black, bgcolor=color.white)
+        table.cell(positionTable, 1, 4, "", text_color=color.black, bgcolor=color.white)
+        
+        // 策略提示行
+        if showStrategyNotice
+            table.cell(positionTable, 0, 5, "", text_color=color.black, bgcolor=color.white)
+            table.cell(positionTable, 1, 5, "", text_color=color.black, bgcolor=color.white)
+
+    // 显示策略提示信息
+    if showStrategyNotice
+        hasPosition = strategy.position_size != 0
+        if hasPosition
+            noticeText = "⚠️ 已有仓位，不会再开仓\n💡 请勿设置新的交易警报\n 请修改策略开始时间后再设置警报"
+            table.cell(positionTable, 0, 5, "策略提示", text_color=color.black, bgcolor=color.new(color.yellow, 80))
+            table.cell(positionTable, 1, 5, noticeText, text_color=color.red, bgcolor=color.new(color.yellow, 80), text_size=size.small)
+        else
+            noticeText = "✅ 等待交易信号\n📈 可设置交易警报"
+            table.cell(positionTable, 0, 5, "策略状态", text_color=color.black, bgcolor=color.new(color.green, 90))
+            table.cell(positionTable, 1, 5, noticeText, text_color=color.green, bgcolor=color.new(color.green, 90), text_size=size.small)
