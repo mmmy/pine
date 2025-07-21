@@ -31,25 +31,25 @@ if barstate.isfirst
     // array.push(tradeSignals, "平多")
     // array.push(tradeSizes, 50.0)
 
-        // Trading time: 2025-07-09 10:30:00+07:00, Direction: 做多, Quantity: 7
-    array.push(tradeTimes, timestamp("2025-07-09 10:30:00 GMT+7"))
+        // Trading time: 2025-07-09 10:30:00+08:00, Direction: 做多, Quantity: 0.7
+    array.push(tradeTimes, timestamp("2025-07-09 10:30:00 GMT+8"))
     array.push(tradeSignals, "做多")
-    array.push(tradeSizes, 7.0)
+    array.push(tradeSizes, 0.7)
 
-    // Trading time: 2025-07-09 14:15:00+07:00, Direction: 平多, Quantity: 6
-    array.push(tradeTimes, timestamp("2025-07-09 14:15:00 GMT+7"))
+    // Trading time: 2025-07-09 14:15:00+08:00, Direction: 平多, Quantity: 0.6
+    array.push(tradeTimes, timestamp("2025-07-09 14:15:00 GMT+8"))
     array.push(tradeSignals, "平多")
-    array.push(tradeSizes, 6.0)
+    array.push(tradeSizes, 0.6)
 
-    // Trading time: 2025-07-09 16:45:00+07:00, Direction: 做空, Quantity: 10
-    array.push(tradeTimes, timestamp("2025-07-09 16:45:00 GMT+7"))
+    // Trading time: 2025-07-09 16:45:00+08:00, Direction: 做空, Quantity: 1
+    array.push(tradeTimes, timestamp("2025-07-09 16:45:00 GMT+8"))
     array.push(tradeSignals, "做空")
-    array.push(tradeSizes, 10.0)
+    array.push(tradeSizes, 1)
 
-    // Trading time: 2025-07-10 16:45:00+07:00, Direction: 平空, Quantity: 20
-    array.push(tradeTimes, timestamp("2025-07-10 16:45:00 GMT+7"))
+    // Trading time: 2025-07-10 16:45:00+08:00, Direction: 平空, Quantity: 2
+    array.push(tradeTimes, timestamp("2025-07-10 16:45:00 GMT+8"))
     array.push(tradeSignals, "平空")
-    array.push(tradeSizes, 20.0)
+    array.push(tradeSizes, 2)
 
     
 

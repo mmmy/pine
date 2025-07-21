@@ -116,7 +116,7 @@ try {
             $pineScriptLines += "    // Trading time: $time, Direction: $direction, Quantity: $quantity"
             $pineScriptLines += "    array.push(tradeTimes, timestamp(`"$timeFormatted`"))"
             $pineScriptLines += "    array.push(tradeSignals, `"$direction`")"
-            $pineScriptLines += "    array.push(tradeSizes, $quantity.0)"
+            $pineScriptLines += "    array.push(tradeSizes, $quantity)"
             $pineScriptLines += ""
         }
     }

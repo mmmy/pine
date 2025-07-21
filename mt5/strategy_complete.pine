@@ -2,7 +2,7 @@
 // © gouge99
 
 //@version=6
-strategy("MT5 strategy", overlay=true, calc_on_every_tick=true)
+strategy("MT5 strategy", overlay=true, calc_on_every_tick=true, max_labels_count = 500)
 
 // 交易设置
 tradingGroup = '交易设置'
