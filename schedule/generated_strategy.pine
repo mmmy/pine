@@ -46,10 +46,10 @@ if barstate.isfirst
     array.push(tradeSignals, "做空")
     array.push(tradeSizes, 1)
 
-    // Trading time: 2025-07-10 16:45:00+08:00, Direction: 平空, Quantity: 2
+    // Trading time: 2025-07-10 16:45:00+08:00, Direction: 平空, Quantity: 0.9
     array.push(tradeTimes, timestamp("2025-07-10 16:45:00 GMT+8"))
     array.push(tradeSignals, "平空")
-    array.push(tradeSizes, 2)
+    array.push(tradeSizes, 0.9)
 
     
 

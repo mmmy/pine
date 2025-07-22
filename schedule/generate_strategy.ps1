@@ -86,9 +86,24 @@ try {
     foreach ($line in $dataLines) {
         if ($line.Trim() -ne "") {
             $parts = $line.Split(',')
+
+            # Check if we have exactly 3 parts
+            if ($parts.Length -ne 3) {
+                Write-Host "  ⚠ Skipping invalid line (wrong column count): $line" -ForegroundColor Yellow
+                continue
+            }
+
             $time = $parts[0].Trim()
             $direction = $parts[1].Trim()
             $quantity = $parts[2].Trim()
+
+            # Check if any field is empty
+            if ([string]::IsNullOrWhiteSpace($time) -or
+                [string]::IsNullOrWhiteSpace($direction) -or
+                [string]::IsNullOrWhiteSpace($quantity)) {
+                Write-Host "  ⚠ Skipping line with empty fields: $line" -ForegroundColor Yellow
+                continue
+            }
 
             # Handle different time formats and timezone conversion
             # Normalize date format: convert "2025/7/9 16:45" to "2025-07-09 16:45:00"
@@ -167,9 +182,22 @@ try {
     foreach ($line in $dataLines) {
         if ($line.Trim() -ne "") {
             $parts = $line.Split(',')
+
+            # Check if we have exactly 3 parts and no empty fields
+            if ($parts.Length -ne 3) {
+                continue
+            }
+
             $time = $parts[0].Trim()
             $direction = $parts[1].Trim()
             $quantity = $parts[2].Trim()
+
+            # Skip lines with empty fields
+            if ([string]::IsNullOrWhiteSpace($time) -or
+                [string]::IsNullOrWhiteSpace($direction) -or
+                [string]::IsNullOrWhiteSpace($quantity)) {
+                continue
+            }
             $directionText = ""
             $emoji = ""
             
