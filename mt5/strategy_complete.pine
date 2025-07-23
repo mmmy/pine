@@ -12,7 +12,7 @@ positionSize = input.float(1.0, "开仓数量", minval=0.01, group=tradingGroup)
 resistanceLevel = input.price(0.0, "阻力位价格", group=tradingGroup, tooltip="大于0才生效")
 minBodySize = input.float(1.0, "最小实体长度", group=tradingGroup)
 enableSpinningTopSignal = input.bool(true, "启用纺锤线信号开仓", group=tradingGroup)
-enableSpinningTopPriceCheck = input.bool(false, "启用纺锤线收盘价比较条件", group=tradingGroup, tooltip="做多：收盘价>白色纺锤线收盘价；做空：收盘价<黑色纺锤线收盘价")
+enableSpinningTopPriceCheck = input.bool(true, "启用纺锤线收盘价比较条件", group=tradingGroup, tooltip="做多：收盘价>白色纺锤线收盘价；做空：收盘价<黑色纺锤线收盘价")
 
 // 时间设置
 timeGroup = '时间设置'
@@ -120,14 +120,6 @@ isInTradingSession() =>
 
 bgcolor(showTimeBackground and isInTradingSession() ? color.new(color.blue, 95) : na)
 
-// 绘制阻力位线
-var line resistanceLine = na
-var label resistanceLabel = na
-if showResistanceLevel and resistanceLevel > 0 and time >= resistanceStartTime and na(resistanceLine)
-    resistanceLine := line.new(bar_index, resistanceLevel, bar_index + 1, resistanceLevel, 
-                              color=color.red, style=line.style_dashed, width=2, extend=extend.right)
-    resistanceLabel := label.new(bar_index, resistanceLevel, "阻力位: " + str.tostring(resistanceLevel), 
-                                  style=label.style_arrowup, color=color.red, textcolor=color.white, size=size.normal)
 // 检查是否在每小时的最后10分钟
 isLastTenMinutes() =>
     currentMinute = minute(time)
@@ -147,12 +139,16 @@ isAfterBlackSpinBeforeWhite = bsTTB < bsSTW or (bsTTB >= 0 and na(bsSTW))
 longCondition1 = false
 longCondition2 = false
 
-// 做多条件1：压力位突破
-if resistanceLevel > 0
+var longCondition1Count = 0
+
+// 做多条件1：压力位突破, 只做一次
+if resistanceLevel > 0 and longCondition1Count == 0
     bodyLength = close - open
     hasNoLowerShadow = open == low
     bodyAboveResistance = open < resistanceLevel and (close - resistanceLevel) / (close - open) > 2/3
     longCondition1 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and bodyAboveResistance and resistanceTimeConditionMet
+    if longCondition1
+        longCondition1Count += 1
 
 // 做多条件2：纺锤线做多
 if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
@@ -165,12 +161,30 @@ if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
 shortCondition1 = false
 shortCondition2 = false
 
-// 做空条件1：压力位做空
-if resistanceLevel > 0
+var shortCondition1Count = 0
+
+// 做空条件1：压力位做空, 只做一次
+if resistanceLevel > 0 and shortCondition1Count == 0
     bodyLength = open - close
     hasNoUpperShadow = open == high
     bodyBelowResistance = open > resistanceLevel and (close - resistanceLevel) / (close - open) > 2/3
     shortCondition1 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and bodyBelowResistance and resistanceTimeConditionMet
+    if shortCondition1
+        shortCondition1Count += 1
+
+// 根据交易方向设置执行交易
+canLong = tradingDirection == "做多"
+canShort = tradingDirection == "做空"
+
+// 绘制阻力位线
+var line resistanceLine = na
+var label resistanceLabel = na
+if showResistanceLevel and resistanceLevel > 0 and time >= resistanceStartTime and na(resistanceLine)
+    resistanceLine := line.new(bar_index, resistanceLevel, bar_index + 1, resistanceLevel, 
+                              color=color.red, style=line.style_dashed, width=2, extend=extend.right)
+    resistanceLabel := label.new(bar_index, resistanceLevel, "阻力位: " + str.tostring(resistanceLevel), 
+                                  style=label.style_arrowup, color=color.red, textcolor=color.white, size=size.normal)
+
 
 // 做空条件2：纺锤线做空
 if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
@@ -179,9 +193,7 @@ if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
     priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and close < blackSpinClosePrice) : true
     shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and spinningTimeConditionMet and priceCondition
 
-// 根据交易方向设置执行交易
-canLong = tradingDirection == "做多"
-canShort = tradingDirection == "做空"
+
 
 // 信号触发
 longSignal = canLong and (longCondition1 or (longCondition2 and enableSpinningTopSignal))
@@ -199,10 +211,10 @@ plotshape(shortResistanceSignal, title="压力位做空", location=location.abov
 plotshape(shortSpinningSignal, title="纺锤线做空", location=location.abovebar, color=color.maroon, style=shape.labeldown, text="纺", textcolor=color.white, size=size.small)
 
 // 警报条件
-alertcondition(longResistanceSignal, title="压力位做多", message="MT5压力位做多信号触发")
-alertcondition(longSpinningSignal, title="纺锤线做多", message="MT5纺锤线做多信号触发")
-alertcondition(shortResistanceSignal, title="压力位做空", message="MT5压力位做空信号触发")
-alertcondition(shortSpinningSignal, title="纺锤线做空", message="MT5纺锤线做空信号触发")
+alertcondition(longResistanceSignal, title="压力位做多", message="long")
+alertcondition(longSpinningSignal, title="纺锤线做多", message="long")
+alertcondition(shortResistanceSignal, title="压力位做空", message="short")
+alertcondition(shortSpinningSignal, title="纺锤线做空", message="short")
 
 // 指标信息表格
 var table indicatorTable = table.new(position.top_right, 2, 4, bgcolor=color.white, border_width=1)
