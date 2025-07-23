@@ -2,11 +2,11 @@
 // © gouge99
 
 //@version=6
-strategy("MT5 strategy", overlay=true, calc_on_every_tick=true, max_labels_count = 500)
+indicator("MT5 Indicator", overlay=true, max_labels_count = 500)
 
 // 交易设置
 tradingGroup = '交易设置'
-strategyStartTime = input.time(timestamp("2025-07-15 00:00:00"), "策略开始时间", group=tradingGroup)
+indicatorStartTime = input.time(timestamp("2025-07-15 00:00:00"), "指标开始时间", group=tradingGroup)
 tradingDirection = input.string("做多", "交易方向", options=["做多", "做空"], group=tradingGroup)
 positionSize = input.float(1.0, "开仓数量", minval=0.01, group=tradingGroup)
 resistanceLevel = input.price(0.0, "阻力位价格", group=tradingGroup, tooltip="大于0才生效")
@@ -44,7 +44,7 @@ showSpinInfo = input.bool(false, title = '显示纺锤线', group = infoLabal)
 label_color_neutral = input(color.gray, "Label Color Neutral", group = infoLabal)
 showTimeBackground = input.bool(false, "显示有效时间区间背景", group = infoLabal)
 showResistanceLevel = input.bool(true, "显示阻力位线", group = infoLabal)
-showStrategyNotice = input.bool(true, "显示策略提示信息", group = infoLabal)
+showStrategyNotice = input.bool(true, "显示指标信息表格", group = infoLabal)
 
 // 纺锤线计算
 C_Len = 14 // ta.ema depth for bodyAvg
@@ -123,7 +123,7 @@ bgcolor(showTimeBackground and isInTradingSession() ? color.new(color.blue, 95) 
 // 绘制阻力位线
 var line resistanceLine = na
 var label resistanceLabel = na
-if showResistanceLevel and resistanceLevel > 0 and time >= strategyStartTime and na(resistanceLine)
+if showResistanceLevel and resistanceLevel > 0 and time >= indicatorStartTime and na(resistanceLine)
     resistanceLine := line.new(bar_index, resistanceLevel, bar_index + 1, resistanceLevel, 
                               color=color.red, style=line.style_dashed, width=2, extend=extend.right)
     resistanceLabel := label.new(bar_index, resistanceLevel, "阻力位: " + str.tostring(resistanceLevel), 
@@ -134,7 +134,7 @@ isLastTenMinutes() =>
     currentMinute >= 50
 
 // 时间条件满足
-timeConditionMet = isInTradingSession() and not isLastTenMinutes() and time >= strategyStartTime
+timeConditionMet = isInTradingSession() and not isLastTenMinutes() and time >= indicatorStartTime
 
 // 纺锤线状态判断：使用barssince来判断最近的纺锤线类型
 // 做多：白色纺锤线之后，出现黑色纺锤线之前
@@ -182,83 +182,46 @@ if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
 canLong = tradingDirection == "做多"
 canShort = tradingDirection == "做空"
 
-if barstate.isconfirmed
-    // 执行交易
-    if canLong and longCondition1
-        strategy.entry("Long", strategy.long, qty=positionSize, comment="压力位做多")
+// 信号触发
+longSignal = canLong and (longCondition1 or (longCondition2 and enableSpinningTopSignal))
+shortSignal = canShort and (shortCondition1 or (shortCondition2 and enableSpinningTopSignal))
 
-    if canLong and longCondition2 and enableSpinningTopSignal
-        strategy.entry("Long", strategy.long, qty=positionSize, comment="纺锤线做多")
+// 绘制信号箭头
+longResistanceSignal = canLong and longCondition1
+longSpinningSignal = canLong and longCondition2 and enableSpinningTopSignal
+shortResistanceSignal = canShort and shortCondition1
+shortSpinningSignal = canShort and shortCondition2 and enableSpinningTopSignal
 
-    if canShort and shortCondition1
-        strategy.entry("Short", strategy.short, qty=positionSize, comment="压力位做空")
+plotshape(longResistanceSignal, title="压力位做多", location=location.belowbar, color=color.green, style=shape.labelup, text="压", textcolor=color.white, size=size.small)
+plotshape(longSpinningSignal, title="纺锤线做多", location=location.belowbar, color=color.lime, style=shape.labelup, text="纺", textcolor=color.white, size=size.small)
+plotshape(shortResistanceSignal, title="压力位做空", location=location.abovebar, color=color.red, style=shape.labeldown, text="压", textcolor=color.white, size=size.small)
+plotshape(shortSpinningSignal, title="纺锤线做空", location=location.abovebar, color=color.maroon, style=shape.labeldown, text="纺", textcolor=color.white, size=size.small)
 
-    if canShort and shortCondition2 and enableSpinningTopSignal
-        strategy.entry("Short", strategy.short, qty=positionSize, comment="纺锤线做空")
+// 警报条件
+alertcondition(longResistanceSignal, title="压力位做多", message="MT5压力位做多信号触发")
+alertcondition(longSpinningSignal, title="纺锤线做多", message="MT5纺锤线做多信号触发")
+alertcondition(shortResistanceSignal, title="压力位做空", message="MT5压力位做空信号触发")
+alertcondition(shortSpinningSignal, title="纺锤线做空", message="MT5纺锤线做空信号触发")
 
-// 仓位信息表格
-var table positionTable = table.new(position.top_right, 2, 6, bgcolor=color.white, border_width=1)
+// 指标信息表格
+var table indicatorTable = table.new(position.top_right, 2, 4, bgcolor=color.white, border_width=1)
 
-if barstate.islast
-    // 获取当前仓位信息
-    currentPosition = strategy.position_size
-    entryPrice = strategy.position_avg_price
-    unrealizedPnL = strategy.openprofit
-
-    // 获取开仓时间
-    entryTime = strategy.opentrades > 0 ? strategy.opentrades.entry_time(0) : na
-
+if barstate.islast and showStrategyNotice
     // 表格标题
-    table.cell(positionTable, 0, 0, "仓位信息", text_color=color.black, bgcolor=color.gray, text_size=size.normal)
-    table.cell(positionTable, 1, 0, "", text_color=color.black, bgcolor=color.gray)
+    table.cell(indicatorTable, 0, 0, "指标信息", text_color=color.black, bgcolor=color.gray, text_size=size.normal)
+    table.cell(indicatorTable, 1, 0, "", text_color=color.black, bgcolor=color.gray)
 
-    // 当前仓位
-    table.cell(positionTable, 0, 1, "当前仓位", text_color=color.black, bgcolor=color.white)
-    positionText = currentPosition == 0 ? "无仓位" :
-                   currentPosition > 0 ? "多头 " + str.tostring(math.abs(currentPosition)) :
-                   "空头 " + str.tostring(math.abs(currentPosition))
-    positionColor = currentPosition == 0 ? color.gray :
-                      currentPosition > 0 ? color.green : color.red
-    table.cell(positionTable, 1, 1, positionText, text_color=positionColor, bgcolor=color.white)
+    // 当前状态
+    table.cell(indicatorTable, 0, 1, "当前状态", text_color=color.black, bgcolor=color.white)
+    statusText = "等待信号中"
+    table.cell(indicatorTable, 1, 1, statusText, text_color=color.blue, bgcolor=color.white)
 
-    // 如果有仓位，显示详细信息
-    if currentPosition != 0
-        // 开仓价格
-        table.cell(positionTable, 0, 2, "开仓价格", text_color=color.black, bgcolor=color.white)
-        table.cell(positionTable, 1, 2, str.tostring(entryPrice, "#.####"), text_color=color.black, bgcolor=color.white)
+    // 交易方向
+    table.cell(indicatorTable, 0, 2, "交易方向", text_color=color.black, bgcolor=color.white)
+    directionColor = tradingDirection == "做多" ? color.green : color.red
+    table.cell(indicatorTable, 1, 2, tradingDirection, text_color=directionColor, bgcolor=color.white)
 
-        // 开仓时间
-        table.cell(positionTable, 0, 3, "开仓时间", text_color=color.black, bgcolor=color.white)
-        timeStr = not na(entryTime) ? str.format_time(entryTime, "yyyy-MM-dd HH:mm", timezone) : "N/A"
-        table.cell(positionTable, 1, 3, timeStr, text_color=color.black, bgcolor=color.white)
-
-        // 未实现盈亏
-        table.cell(positionTable, 0, 4, "未实现盈亏", text_color=color.black, bgcolor=color.white)
-        pnlColor = unrealizedPnL > 0 ? color.green : unrealizedPnL < 0 ? color.red : color.gray
-        pnlText = str.tostring(unrealizedPnL, "#.##")
-        table.cell(positionTable, 1, 4, pnlText, text_color=pnlColor, bgcolor=color.white)
-    else
-        // 无仓位时显示空行
-        table.cell(positionTable, 0, 2, "", text_color=color.black, bgcolor=color.white)
-        table.cell(positionTable, 1, 2, "", text_color=color.black, bgcolor=color.white)
-        table.cell(positionTable, 0, 3, "", text_color=color.black, bgcolor=color.white)
-        table.cell(positionTable, 1, 3, "", text_color=color.black, bgcolor=color.white)
-        table.cell(positionTable, 0, 4, "", text_color=color.black, bgcolor=color.white)
-        table.cell(positionTable, 1, 4, "", text_color=color.black, bgcolor=color.white)
-        
-        // 策略提示行
-        if showStrategyNotice
-            table.cell(positionTable, 0, 5, "", text_color=color.black, bgcolor=color.white)
-            table.cell(positionTable, 1, 5, "", text_color=color.black, bgcolor=color.white)
-
-    // 显示策略提示信息
-    if showStrategyNotice
-        hasPosition = strategy.position_size != 0
-        if hasPosition
-            noticeText = "⚠️ 已有仓位，不会再开仓\n💡 请勿设置新的交易警报\n 请修改策略开始时间后再设置警报"
-            table.cell(positionTable, 0, 5, "策略提示", text_color=color.black, bgcolor=color.new(color.yellow, 80))
-            table.cell(positionTable, 1, 5, noticeText, text_color=color.red, bgcolor=color.new(color.yellow, 80), text_size=size.small)
-        else
-            noticeText = "✅ 等待交易信号\n📈 可设置交易警报"
-            table.cell(positionTable, 0, 5, "策略状态", text_color=color.black, bgcolor=color.new(color.green, 90))
-            table.cell(positionTable, 1, 5, noticeText, text_color=color.green, bgcolor=color.new(color.green, 90), text_size=size.small)
+    // 使用说明
+    table.cell(indicatorTable, 0, 3, "使用说明", text_color=color.black, bgcolor=color.new(color.blue, 90))
+    noticeText = "📈 信号出现时会显示箭头\n⚠️ 请设置警报以接收通知"
+    table.cell(indicatorTable, 1, 3, noticeText, text_color=color.blue, bgcolor=color.new(color.blue, 90), text_size=size.small)
