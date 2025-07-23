@@ -6,7 +6,7 @@ indicator("MT5 Indicator", overlay=true, max_labels_count = 500)
 
 // 交易设置
 tradingGroup = '交易设置'
-indicatorStartTime = input.time(timestamp("2025-07-15 00:00:00"), "指标开始时间", group=tradingGroup)
+resistanceStartTime = input.time(timestamp("2025-07-15 00:00:00"), "压力位开始时间", group=tradingGroup, tooltip="控制压力位信号的起始时间，纺锤线信号不受此限制")
 tradingDirection = input.string("做多", "交易方向", options=["做多", "做空"], group=tradingGroup)
 positionSize = input.float(1.0, "开仓数量", minval=0.01, group=tradingGroup)
 resistanceLevel = input.price(0.0, "阻力位价格", group=tradingGroup, tooltip="大于0才生效")
@@ -123,7 +123,7 @@ bgcolor(showTimeBackground and isInTradingSession() ? color.new(color.blue, 95) 
 // 绘制阻力位线
 var line resistanceLine = na
 var label resistanceLabel = na
-if showResistanceLevel and resistanceLevel > 0 and time >= indicatorStartTime and na(resistanceLine)
+if showResistanceLevel and resistanceLevel > 0 and time >= resistanceStartTime and na(resistanceLine)
     resistanceLine := line.new(bar_index, resistanceLevel, bar_index + 1, resistanceLevel, 
                               color=color.red, style=line.style_dashed, width=2, extend=extend.right)
     resistanceLabel := label.new(bar_index, resistanceLevel, "阻力位: " + str.tostring(resistanceLevel), 
@@ -133,8 +133,9 @@ isLastTenMinutes() =>
     currentMinute = minute(time)
     currentMinute >= 50
 
-// 时间条件满足
-timeConditionMet = isInTradingSession() and not isLastTenMinutes() and time >= indicatorStartTime
+// 时间条件满足（分别为阻力位和纺锤线）
+resistanceTimeConditionMet = isInTradingSession() and not isLastTenMinutes() and time >= resistanceStartTime
+spinningTimeConditionMet = isInTradingSession() and not isLastTenMinutes()
 
 // 纺锤线状态判断：使用barssince来判断最近的纺锤线类型
 // 做多：白色纺锤线之后，出现黑色纺锤线之前
@@ -151,14 +152,14 @@ if resistanceLevel > 0
     bodyLength = close - open
     hasNoLowerShadow = open == low
     bodyAboveResistance = open < resistanceLevel and (close - resistanceLevel) / (close - open) > 2/3
-    longCondition1 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and bodyAboveResistance and timeConditionMet
+    longCondition1 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and bodyAboveResistance and resistanceTimeConditionMet
 
 // 做多条件2：纺锤线做多
 if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
     bodyLength = close - open
     hasNoLowerShadow = open == low
     priceCondition = enableSpinningTopPriceCheck ? (not na(whiteSpinClosePrice) and close > whiteSpinClosePrice) : true
-    longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and timeConditionMet and priceCondition
+    longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and spinningTimeConditionMet and priceCondition
 
 // 做空条件
 shortCondition1 = false
@@ -169,14 +170,14 @@ if resistanceLevel > 0
     bodyLength = open - close
     hasNoUpperShadow = open == high
     bodyBelowResistance = open > resistanceLevel and (close - resistanceLevel) / (close - open) > 2/3
-    shortCondition1 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and bodyBelowResistance and timeConditionMet
+    shortCondition1 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and bodyBelowResistance and resistanceTimeConditionMet
 
 // 做空条件2：纺锤线做空
 if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
     bodyLength = open - close
     hasNoUpperShadow = open == high
     priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and close < blackSpinClosePrice) : true
-    shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and timeConditionMet and priceCondition
+    shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and spinningTimeConditionMet and priceCondition
 
 // 根据交易方向设置执行交易
 canLong = tradingDirection == "做多"
