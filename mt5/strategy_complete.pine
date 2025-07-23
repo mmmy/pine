@@ -12,7 +12,7 @@ positionSize = input.float(1.0, "开仓数量", minval=0.01, group=tradingGroup)
 resistanceLevel = input.price(0.0, "阻力位价格", group=tradingGroup, tooltip="大于0才生效")
 minBodySize = input.float(1.0, "最小实体长度", group=tradingGroup)
 enableSpinningTopSignal = input.bool(true, "启用纺锤线信号开仓", group=tradingGroup)
-enableSpinningTopPriceCheck = input.bool(true, "启用纺锤线收盘价比较条件", group=tradingGroup, tooltip="做多：收盘价>白色纺锤线收盘价；做空：收盘价<黑色纺锤线收盘价")
+enableSpinningTopPriceCheck = input.bool(true, "启用纺锤线价格比较条件", group=tradingGroup, tooltip="做多：开盘价>白色纺锤线收盘价；做空：开盘价<黑色纺锤线收盘价")
 
 // 时间设置
 timeGroup = '时间设置'
@@ -154,7 +154,7 @@ if resistanceLevel > 0 and longCondition1Count == 0
 if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
     bodyLength = close - open
     hasNoLowerShadow = open == low
-    priceCondition = enableSpinningTopPriceCheck ? (not na(whiteSpinClosePrice) and close > whiteSpinClosePrice) : true
+    priceCondition = enableSpinningTopPriceCheck ? (not na(whiteSpinClosePrice) and open > whiteSpinClosePrice) : true
     longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and spinningTimeConditionMet and priceCondition
 
 // 做空条件
@@ -190,7 +190,7 @@ if showResistanceLevel and resistanceLevel > 0 and time >= resistanceStartTime a
 if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
     bodyLength = open - close
     hasNoUpperShadow = open == high
-    priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and close < blackSpinClosePrice) : true
+    priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and open < blackSpinClosePrice) : true
     shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and spinningTimeConditionMet and priceCondition
 
 
