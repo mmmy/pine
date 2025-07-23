@@ -150,18 +150,28 @@ if resistanceLevel > 0 and longCondition1Count == 0
     if longCondition1
         longCondition1Count += 1
 
+var waitSTBReset = false
+if C_SpinningTopBlack
+    waitSTBReset := true
 // 做多条件2：纺锤线做多
 if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
     bodyLength = close - open
     hasNoLowerShadow = open == low
     priceCondition = enableSpinningTopPriceCheck ? (not na(whiteSpinClosePrice) and open > whiteSpinClosePrice) : true
-    longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and spinningTimeConditionMet and priceCondition
+    // 白色纺锤线到黑色纺锤线之间只做一次
+    longCondition2 := waitSTBReset and C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and spinningTimeConditionMet and priceCondition
+    if longCondition2
+        waitSTBReset := false
 
 // 做空条件
 shortCondition1 = false
 shortCondition2 = false
 
 var shortCondition1Count = 0
+
+var waitSTWReset = false
+if C_SpinningTopWhite
+    waitSTWReset := true
 
 // 做空条件1：压力位做空, 只做一次
 if resistanceLevel > 0 and shortCondition1Count == 0
@@ -191,7 +201,10 @@ if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
     bodyLength = open - close
     hasNoUpperShadow = open == high
     priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and open < blackSpinClosePrice) : true
-    shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and spinningTimeConditionMet and priceCondition
+    // 黑色纺锤线到白色纺锤线之间只做一次
+    shortCondition2 := waitSTWReset and C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and spinningTimeConditionMet and priceCondition
+    if shortCondition2
+        waitSTWReset := false
 
 
 
