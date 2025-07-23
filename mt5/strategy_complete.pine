@@ -109,10 +109,10 @@ isLastTenMinutes() =>
 timeConditionMet = isInTradingSession() and not isLastTenMinutes() and time >= strategyStartTime
 
 // 纺锤线状态判断：使用barssince来判断最近的纺锤线类型
-// 做多：黑色纺锤线之后，出现白色纺锤线之前
-// 做空：白色纺锤线之后，出现黑色纺锤线之前
-isAfterBlackSpinBeforeWhite = bsTTB < bsSTW or (bsTTB >= 0 and na(bsSTW))
+// 做多：白色纺锤线之后，出现黑色纺锤线之前
+// 做空：黑色纺锤线之后，出现白色纺锤线之前
 isAfterWhiteSpinBeforeBlack = bsSTW < bsTTB or (bsSTW >= 0 and na(bsTTB))
+isAfterBlackSpinBeforeWhite = bsTTB < bsSTW or (bsTTB >= 0 and na(bsSTW))
 
 // 做多条件
 longCondition1 = false
@@ -126,7 +126,7 @@ if resistanceLevel > 0
     longCondition1 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and bodyAboveResistance and timeConditionMet
 
 // 做多条件2：纺锤线做多
-if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
+if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
     bodyLength = close - open
     hasNoLowerShadow = open == low
     longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and timeConditionMet
@@ -143,7 +143,7 @@ if resistanceLevel > 0
     shortCondition1 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and bodyBelowResistance and timeConditionMet
 
 // 做空条件2：纺锤线做空
-if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
+if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
     bodyLength = open - close
     hasNoUpperShadow = open == high
     shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and timeConditionMet
