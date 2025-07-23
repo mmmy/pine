@@ -12,6 +12,7 @@ positionSize = input.float(1.0, "开仓数量", minval=0.01, group=tradingGroup)
 resistanceLevel = input.price(0.0, "阻力位价格", group=tradingGroup, tooltip="大于0才生效")
 minBodySize = input.float(1.0, "最小实体长度", group=tradingGroup)
 enableSpinningTopSignal = input.bool(true, "启用纺锤线信号开仓", group=tradingGroup)
+enableSpinningTopPriceCheck = input.bool(false, "启用纺锤线收盘价比较条件", group=tradingGroup, tooltip="做多：收盘价>白色纺锤线收盘价；做空：收盘价<黑色纺锤线收盘价")
 
 // 时间设置
 timeGroup = '时间设置'
@@ -24,6 +25,18 @@ enableSession3 = input.bool(true, "启用", group=timeGroup, inline="session3")
 timeSession3 = input.session("1900-2300", "交易时间段3", group=timeGroup, inline="session3")
 enableSession4 = input.bool(true, "启用", group=timeGroup, inline="session4")
 timeSession4 = input.session("0000-0600", "交易时间段4", group=timeGroup, inline="session4")
+enableSession5 = input.bool(false, "启用", group=timeGroup, inline="session5")
+timeSession5 = input.session("0600-0800", "交易时间段5", group=timeGroup, inline="session5")
+enableSession6 = input.bool(false, "启用", group=timeGroup, inline="session6")
+timeSession6 = input.session("1200-1300", "交易时间段6", group=timeGroup, inline="session6")
+enableSession7 = input.bool(false, "启用", group=timeGroup, inline="session7")
+timeSession7 = input.session("1700-1900", "交易时间段7", group=timeGroup, inline="session7")
+enableSession8 = input.bool(false, "启用", group=timeGroup, inline="session8")
+timeSession8 = input.session("2300-0000", "交易时间段8", group=timeGroup, inline="session8")
+enableSession9 = input.bool(false, "启用", group=timeGroup, inline="session9")
+timeSession9 = input.session("0400-0600", "交易时间段9", group=timeGroup, inline="session9")
+enableSession10 = input.bool(false, "启用", group=timeGroup, inline="session10")
+timeSession10 = input.session("2100-2300", "交易时间段10", group=timeGroup, inline="session10")
 
 // 输入参数设置
 infoLabal = '显示设置'
@@ -82,13 +95,28 @@ if showSpinInfo and C_SpinningTopBlack
 bsSTW = ta.barssince(C_SpinningTopWhite)
 bsTTB = ta.barssince(C_SpinningTopBlack)
 
+// 保存纺锤线的收盘价
+var float whiteSpinClosePrice = na
+var float blackSpinClosePrice = na
+
+if C_SpinningTopWhite
+    whiteSpinClosePrice := close
+if C_SpinningTopBlack
+    blackSpinClosePrice := close
+
 // 时间条件检查
 isInTradingSession() =>
     session1 = enableSession1 ? time(timeframe.period, timeSession1, timezone) : na
     session2 = enableSession2 ? time(timeframe.period, timeSession2, timezone) : na
     session3 = enableSession3 ? time(timeframe.period, timeSession3, timezone) : na
     session4 = enableSession4 ? time(timeframe.period, timeSession4, timezone) : na
-    not na(session1) or not na(session2) or not na(session3) or not na(session4)
+    session5 = enableSession5 ? time(timeframe.period, timeSession5, timezone) : na
+    session6 = enableSession6 ? time(timeframe.period, timeSession6, timezone) : na
+    session7 = enableSession7 ? time(timeframe.period, timeSession7, timezone) : na
+    session8 = enableSession8 ? time(timeframe.period, timeSession8, timezone) : na
+    session9 = enableSession9 ? time(timeframe.period, timeSession9, timezone) : na
+    session10 = enableSession10 ? time(timeframe.period, timeSession10, timezone) : na
+    not na(session1) or not na(session2) or not na(session3) or not na(session4) or not na(session5) or not na(session6) or not na(session7) or not na(session8) or not na(session9) or not na(session10)
 
 bgcolor(showTimeBackground and isInTradingSession() ? color.new(color.blue, 95) : na)
 
@@ -129,7 +157,8 @@ if resistanceLevel > 0
 if isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack
     bodyLength = close - open
     hasNoLowerShadow = open == low
-    longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and timeConditionMet
+    priceCondition = enableSpinningTopPriceCheck ? (not na(whiteSpinClosePrice) and close > whiteSpinClosePrice) : true
+    longCondition2 := C_WhiteBody and bodyLength >= minBodySize and hasNoLowerShadow and timeConditionMet and priceCondition
 
 // 做空条件
 shortCondition1 = false
@@ -146,7 +175,8 @@ if resistanceLevel > 0
 if isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite
     bodyLength = open - close
     hasNoUpperShadow = open == high
-    shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and timeConditionMet
+    priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and close < blackSpinClosePrice) : true
+    shortCondition2 := C_BlackBody and bodyLength >= minBodySize and hasNoUpperShadow and timeConditionMet and priceCondition
 
 // 根据交易方向设置执行交易
 canLong = tradingDirection == "做多"
