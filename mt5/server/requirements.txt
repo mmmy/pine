@@ -1,0 +1,25 @@
+# MT5 Trading HTTP Server Dependencies
+
+# Core web framework
+Flask
+Flask-CORS
+
+# MT5 connection
+MetaTrader5
+
+# Data handling
+pandas
+numpy
+
+# HTTP requests (for testing)
+requests
+
+# Configuration and logging
+python-dotenv
+PyYAML
+
+# Date and time handling
+pytz
+
+# JSON schema validation
+jsonschema
