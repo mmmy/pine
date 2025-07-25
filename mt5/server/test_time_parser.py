@@ -10,8 +10,6 @@ def test_time_commands():
     """Test time interval commands."""
     
     test_messages = [
-        "开启时间区间 时间区间=europe,america",
-        "关闭时间区间",
         "开启时间区间"
     ]
     

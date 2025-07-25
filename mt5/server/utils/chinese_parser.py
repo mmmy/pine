@@ -24,9 +24,7 @@ class ChineseMessageParser:
         '平仓': 'close',
         '全平': 'close_all',
         '修改': 'modify',
-        '开启时间区间': 'enable_trading_hours',
-        '关闭时间区间': 'disable_trading_hours',
-        '设置时间区间': 'set_trading_hours'
+        '开启时间区间': 'enable_trading_hours'
     }
     
     # 参数映射
@@ -109,7 +107,7 @@ class ChineseMessageParser:
         }
 
         # 时间区间控制命令不需要交易品种
-        if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+        if action == 'enable_trading_hours':
             # 时间区间控制命令，从第1个参数开始解析
             start_index = 1
         else:
@@ -135,7 +133,7 @@ class ChineseMessageParser:
     def _split_message(self, message: str) -> List[str]:
         """Split message into parts."""
         # 先检查是否以多词操作开头
-        multi_word_actions = ['开启时间区间', '关闭时间区间', '设置时间区间']
+        multi_word_actions = ['开启时间区间']
 
         for action in multi_word_actions:
             if message.startswith(action):
@@ -256,7 +254,7 @@ class ChineseMessageParser:
             raise ValidationError("缺少操作方向")
 
         # 时间区间控制命令不需要交易品种
-        if action not in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+        if action != 'enable_trading_hours':
             if not symbol:
                 raise ValidationError("缺少交易品种")
         
@@ -298,7 +296,7 @@ class ChineseMessageParser:
         time_fields = ['intervals']
 
         # 根据操作类型选择要复制的字段
-        if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+        if action == 'enable_trading_hours':
             # 时间区间命令，复制时间相关字段
             for field in time_fields:
                 if field in params:

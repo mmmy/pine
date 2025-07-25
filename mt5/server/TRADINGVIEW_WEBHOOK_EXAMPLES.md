@@ -198,56 +198,25 @@ http://你的服务器IP:5000/webhook
 
 ### 5. 时间区间控制
 
-#### 中文格式开启预定义时间区间
-```
-开启时间区间 时间区间=europe,america
-开启时间区间 时间区间=asia
-开启时间区间 时间区间=europe,america,asia
-```
-
-
-
-#### 中文格式关闭时间区间
-```
-关闭时间区间
-关闭时间区间 时间区间=europe
-关闭时间区间 时间区间=america,asia
-```
-
-#### 查看可用时间区间
+#### 中文格式开启时间区间
 ```
 开启时间区间
 ```
 
-#### JSON格式开启预定义时间区间
+#### JSON格式开启时间区间
 ```json
 {
-  "action": "enable_trading_hours",
-  "intervals": "europe,america"
+  "action": "enable_trading_hours"
 }
 ```
 
+#### 自定义时间段说明
+系统配置了3个自定义时间段，使用"开启时间区间"命令会同时启用所有时间段：
+- **自定义时段1**: 欧洲交易时段 (08:00-16:00 London)
+- **自定义时段2**: 美洲交易时段 (14:00-22:00 New York)
+- **自定义时段3**: 亚洲交易时段 (01:00-09:00 Tokyo)
 
-
-#### JSON格式关闭时间区间
-```json
-{
-  "action": "disable_trading_hours"
-}
-```
-
-#### JSON格式关闭特定时间区间
-```json
-{
-  "action": "disable_trading_hours",
-  "intervals": "europe,america"
-}
-```
-
-#### 预定义时间区间说明
-- **europe**: 欧洲时段 (08:00-16:00 London)
-- **america**: 美洲时段 (14:00-22:00 New York)
-- **asia**: 亚洲时段 (01:00-09:00 Tokyo)
+当前时间在任意一个时间段内时，交易被允许。
 
 ## 高级配置示例
 

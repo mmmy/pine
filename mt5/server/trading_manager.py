@@ -46,7 +46,7 @@ class TradingManager:
             action = payload['action'].lower()
 
             # Handle trading hours commands first (they don't need symbol)
-            if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+            if action == 'enable_trading_hours':
                 return self.trading_hours_manager.handle_trading_hours_command(action, payload)
 
             # For regular trading commands, get symbol and check trading hours

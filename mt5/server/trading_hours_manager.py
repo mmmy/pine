@@ -26,133 +26,71 @@ class TradingHoursManager:
         # Trading hours configuration
         self.trading_hours_config = config.get('trading_hours', {})
         self.default_timezone = self.trading_hours_config.get('timezone', 'UTC')
-        self.predefined_intervals = self.trading_hours_config.get('intervals', {})
+        self.custom_intervals = self.trading_hours_config.get('custom_intervals', {})
 
-        # Active trading hours state
+        # Trading hours state (只能通过"开启时间区间"控制)
         self.enabled = False
-        self.active_intervals = []  # List of active interval IDs
 
-        self.logger.info(f"Trading hours manager initialized with {len(self.predefined_intervals)} predefined intervals")
+        self.logger.info(f"Trading hours manager initialized with {len(self.custom_intervals)} custom intervals")
     
-    def enable_trading_hours(self, intervals: str = None) -> Dict[str, Any]:
+    def enable_trading_hours(self) -> Dict[str, Any]:
         """
-        Enable trading hours restriction.
-
-        Args:
-            intervals: Comma-separated list of interval IDs to enable (e.g., "europe,america")
+        Enable trading hours restriction using all configured custom intervals.
 
         Returns:
             Result dictionary
         """
         try:
-            if intervals:
-                # Enable predefined intervals
-                interval_ids = [id.strip() for id in intervals.split(',')]
-                enabled_intervals = []
-
-                for interval_id in interval_ids:
-                    if interval_id in self.predefined_intervals:
-                        enabled_intervals.append(interval_id)
-                        self.logger.info(f"Enabled predefined interval: {interval_id}")
-                    else:
-                        self.logger.warning(f"Unknown interval ID: {interval_id}")
-
-                if enabled_intervals:
-                    self.enabled = True
-                    self.active_intervals = enabled_intervals
-
-                    return {
-                        'success': True,
-                        'message': f'Trading hours enabled for intervals: {", ".join(enabled_intervals)}',
-                        'enabled_intervals': enabled_intervals,
-                        'enabled': True
-                    }
-                else:
-                    raise ValidationError(f"No valid intervals found in: {intervals}")
-
-            else:
-                # Show available intervals if no specific intervals provided
+            if not self.custom_intervals:
                 return {
-                    'success': True,
-                    'message': 'Available predefined intervals',
-                    'available_intervals': {
-                        id: {
-                            'name': interval['name'],
-                            'time': f"{interval['start_time']}-{interval['end_time']}",
-                            'timezone': interval['timezone'],
-                            'description': interval.get('description', '')
-                        }
-                        for id, interval in self.predefined_intervals.items()
-                    },
-                    'usage_examples': [
-                        '开启时间区间 时间区间=europe,america',
-                        '开启时间区间 时间区间=asia'
-                    ]
+                    'success': False,
+                    'message': 'No custom intervals configured',
+                    'enabled': False
                 }
+
+            # Enable all custom intervals
+            self.enabled = True
+
+            self.logger.info("Trading hours enabled for all custom intervals")
+
+            return {
+                'success': True,
+                'message': 'Trading hours enabled for all custom intervals',
+                'enabled': True,
+                'custom_intervals': {
+                    id: {
+                        'name': interval['name'],
+                        'time': f"{interval['start_time']}-{interval['end_time']}",
+                        'timezone': interval['timezone'],
+                        'description': interval.get('description', '')
+                    }
+                    for id, interval in self.custom_intervals.items()
+                }
+            }
 
         except Exception as e:
             error_msg = f"Failed to enable trading hours: {e}"
             self.logger.error(error_msg)
             raise ValidationError(error_msg)
     
-    def disable_trading_hours(self, intervals: str = None) -> Dict[str, Any]:
+    def disable_trading_hours(self) -> Dict[str, Any]:
         """
         Disable trading hours restriction.
 
-        Args:
-            intervals: Comma-separated list of interval IDs to disable, or None to disable all
-
         Returns:
             Result dictionary
         """
-        if intervals:
-            # Disable specific intervals
-            interval_ids = [id.strip() for id in intervals.split(',')]
-            disabled_intervals = []
+        self.enabled = False
 
-            for interval_id in interval_ids:
-                if interval_id in self.active_intervals:
-                    self.active_intervals.remove(interval_id)
-                    disabled_intervals.append(interval_id)
-                    self.logger.info(f"Disabled interval: {interval_id}")
+        self.logger.info("Trading hours disabled")
 
-            # If no active intervals left, disable completely
-            if not self.active_intervals:
-                self.enabled = False
-
-            return {
-                'success': True,
-                'message': f'Disabled intervals: {", ".join(disabled_intervals)}',
-                'disabled_intervals': disabled_intervals,
-                'enabled': self.enabled,
-                'active_intervals': self.active_intervals
-            }
-        else:
-            # Disable all trading hours
-            self.enabled = False
-            self.active_intervals = []
-
-            self.logger.info("All trading hours disabled")
-
-            return {
-                'success': True,
-                'message': 'All trading hours disabled',
-                'enabled': False
-            }
+        return {
+            'success': True,
+            'message': 'Trading hours disabled',
+            'enabled': False
+        }
     
-    def set_trading_hours(self, start_time: str, end_time: str, timezone: str = None) -> Dict[str, Any]:
-        """
-        Set trading hours (same as enable).
-        
-        Args:
-            start_time: Start time in HH:MM format
-            end_time: End time in HH:MM format
-            timezone: Timezone (optional)
-            
-        Returns:
-            Result dictionary
-        """
-        return self.enable_trading_hours(start_time, end_time, timezone)
+
     
     def is_trading_allowed(self) -> bool:
         """
@@ -161,17 +99,12 @@ class TradingHoursManager:
         Returns:
             True if trading is allowed, False otherwise
         """
-        if not self.enabled or not self.active_intervals:
+        if not self.enabled:
             return True
 
         try:
-            # Check each active interval
-            for interval_id in self.active_intervals:
-                if interval_id not in self.predefined_intervals:
-                    continue
-
-                interval = self.predefined_intervals[interval_id]
-
+            # Check each custom interval
+            for interval_id, interval in self.custom_intervals.items():
                 # Get current time in the interval's timezone
                 tz = pytz.timezone(interval['timezone'])
                 current_time = datetime.now(tz).time()
@@ -192,8 +125,8 @@ class TradingHoursManager:
                         self.logger.debug(f"Trading allowed in interval {interval_id} ({interval['name']})")
                         return True
 
-            # No active intervals allow trading at current time
-            self.logger.warning(f"Trading not allowed at current time. Active intervals: {self.active_intervals}")
+            # No intervals allow trading at current time
+            self.logger.warning("Trading not allowed at current time")
             return False
 
         except Exception as e:
@@ -211,54 +144,35 @@ class TradingHoursManager:
         status = {
             'enabled': self.enabled,
             'default_timezone': self.default_timezone,
-            'trading_allowed': self.is_trading_allowed(),
-            'active_intervals': self.active_intervals,
-            'available_intervals': list(self.predefined_intervals.keys())
+            'trading_allowed': self.is_trading_allowed()
         }
 
-        if self.enabled and self.active_intervals:
-            # Add details for each active interval
+        if self.enabled:
+            # Add details for each custom interval
             intervals_detail = {}
-            for interval_id in self.active_intervals:
-                if interval_id in self.predefined_intervals:
-                    interval = self.predefined_intervals[interval_id]
+            for interval_id, interval in self.custom_intervals.items():
+                # Get current time in this interval's timezone
+                try:
+                    tz = pytz.timezone(interval['timezone'])
+                    current_time = datetime.now(tz)
 
-                    # Get current time in this interval's timezone
-                    try:
-                        tz = pytz.timezone(interval['timezone'])
-                        current_time = datetime.now(tz)
+                    intervals_detail[interval_id] = {
+                        'name': interval['name'],
+                        'start_time': interval['start_time'],
+                        'end_time': interval['end_time'],
+                        'timezone': interval['timezone'],
+                        'description': interval.get('description', ''),
+                        'current_time': current_time.strftime("%H:%M"),
+                        'current_date': current_time.strftime("%Y-%m-%d")
+                    }
+                except Exception as e:
+                    self.logger.error(f"Error getting time for interval {interval_id}: {e}")
+                    intervals_detail[interval_id] = {
+                        'name': interval['name'],
+                        'error': str(e)
+                    }
 
-                        intervals_detail[interval_id] = {
-                            'name': interval['name'],
-                            'start_time': interval['start_time'],
-                            'end_time': interval['end_time'],
-                            'timezone': interval['timezone'],
-                            'description': interval.get('description', ''),
-                            'current_time': current_time.strftime("%H:%M"),
-                            'current_date': current_time.strftime("%Y-%m-%d")
-                        }
-                    except Exception as e:
-                        self.logger.error(f"Error getting time for interval {interval_id}: {e}")
-                        intervals_detail[interval_id] = {
-                            'name': interval['name'],
-                            'error': str(e)
-                        }
-
-            status['intervals_detail'] = intervals_detail
-
-        # Add predefined intervals info
-        predefined_info = {}
-        for interval_id, interval in self.predefined_intervals.items():
-            predefined_info[interval_id] = {
-                'name': interval['name'],
-                'start_time': interval['start_time'],
-                'end_time': interval['end_time'],
-                'timezone': interval['timezone'],
-                'description': interval.get('description', ''),
-                'active': interval_id in self.active_intervals
-            }
-
-        status['predefined_intervals'] = predefined_info
+            status['custom_intervals'] = intervals_detail
 
         return status
     
@@ -267,23 +181,18 @@ class TradingHoursManager:
         Handle trading hours related commands.
 
         Args:
-            action: Action to perform (enable_trading_hours, disable_trading_hours, set_trading_hours)
-            params: Parameters for the action
+            action: Action to perform (enable_trading_hours, disable_trading_hours)
+            params: Parameters for the action (not used, kept for compatibility)
 
         Returns:
             Result dictionary
         """
         try:
-            if action == 'enable_trading_hours' or action == 'set_trading_hours':
-                # Check for predefined intervals
-                intervals = params.get('intervals') or params.get('时间区间')
-
-                # Enable predefined intervals or show available intervals
-                return self.enable_trading_hours(intervals=intervals)
+            if action == 'enable_trading_hours':
+                return self.enable_trading_hours()
 
             elif action == 'disable_trading_hours':
-                intervals = params.get('intervals') or params.get('时间区间')
-                return self.disable_trading_hours(intervals=intervals)
+                return self.disable_trading_hours()
 
             else:
                 raise ValidationError(f"Unknown trading hours action: {action}")

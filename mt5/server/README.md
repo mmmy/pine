@@ -224,7 +224,7 @@ Content-Type: text/plain
   - 备注=交易说明 或 注释=交易说明
   - 订单号=123456 或 票号=123456
   - 滑点=5 或 最大滑点=5
-  - 时间区间=europe,america （预定义时间区间）
+
 
 - **开关参数**：只写中文名称，不带等号
   - 允许滑点、强制平仓、部分平仓、立即执行等
@@ -447,8 +447,7 @@ python start_server.py --debug --log-level DEBUG
 curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "开多 XAUUSD 仓位=0.01 备注=测试"
 
 # 测试时间区间控制
-curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "开启时间区间 时间区间=europe,america"
-curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "关闭时间区间"
+curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "开启时间区间"
 ```
 
 ```powershell
@@ -457,7 +456,7 @@ $body = "开多 XAUUSD 仓位=0.01 备注=测试"
 Invoke-RestMethod -Uri "http://127.0.0.1:5000/webhook" -Method POST -Body $body -ContentType "text/plain; charset=utf-8"
 
 # 时间区间控制测试
-$body = "开启时间区间 时间区间=europe,america"
+$body = "开启时间区间"
 Invoke-RestMethod -Uri "http://127.0.0.1:5000/webhook" -Method POST -Body $body -ContentType "text/plain; charset=utf-8"
 ```
 
