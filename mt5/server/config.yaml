@@ -61,7 +61,7 @@ custom_intervals:
     name: "自定义时段3"
     start_time: "01:00"
     end_time: "09:00"
-    timezone: "Asia/Tokyo"
+    timezone: "GMT+8"
     description: "亚洲交易时段"
 
 

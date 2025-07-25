@@ -4,7 +4,8 @@ Manages trading time restrictions based on webhook commands.
 """
 
 import logging
-from datetime import datetime, time
+import re
+from datetime import datetime, time, timezone, timedelta
 from typing import Dict, Any, Optional
 import pytz
 from utils.exceptions import ValidationError
@@ -12,6 +13,42 @@ from utils.exceptions import ValidationError
 
 class TradingHoursManager:
     """Manages trading hours restrictions."""
+
+    @staticmethod
+    def _parse_timezone(timezone_str: str):
+        """
+        Parse timezone string, supporting both standard names and GMT+/-N format.
+
+        Args:
+            timezone_str: Timezone string (e.g., 'Asia/Shanghai', 'GMT+8', 'UTC-5')
+
+        Returns:
+            timezone object
+        """
+        if not timezone_str:
+            return pytz.UTC
+
+        # Check for GMT+/-N or UTC+/-N format
+        gmt_pattern = r'^(GMT|UTC)([+-])(\d{1,2})$'
+        match = re.match(gmt_pattern, timezone_str.upper())
+
+        if match:
+            prefix, sign, hours = match.groups()
+            hours = int(hours)
+
+            # Create timezone offset
+            if sign == '+':
+                offset = timedelta(hours=hours)
+            else:
+                offset = timedelta(hours=-hours)
+
+            return timezone(offset)
+
+        # Try standard timezone names
+        try:
+            return pytz.timezone(timezone_str)
+        except pytz.exceptions.UnknownTimeZoneError:
+            raise ValidationError(f"Invalid timezone: {timezone_str}. Use standard names like 'Asia/Shanghai' or GMT+/-N format like 'GMT+8'")
     
     def __init__(self, config: Dict[str, Any]):
         """
@@ -105,7 +142,7 @@ class TradingHoursManager:
             # Check each custom interval
             for interval_id, interval in self.custom_intervals.items():
                 # Get current time in the interval's timezone
-                tz = pytz.timezone(interval['timezone'])
+                tz = self._parse_timezone(interval['timezone'])
                 current_time = datetime.now(tz).time()
 
                 # Parse interval times
@@ -152,7 +189,7 @@ class TradingHoursManager:
             for interval_id, interval in self.custom_intervals.items():
                 # Get current time in this interval's timezone
                 try:
-                    tz = pytz.timezone(interval['timezone'])
+                    tz = self._parse_timezone(interval['timezone'])
                     current_time = datetime.now(tz)
 
                     intervals_detail[interval_id] = {
