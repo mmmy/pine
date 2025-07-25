@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .status.enabled {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.disabled {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .stats {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+    .stats-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+    .button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 14px;
+    }
+    .button:hover {
+      background-color: #0056b3;
+    }
+    .button.secondary {
+      background-color: #6c757d;
+      margin-top: 10px;
+    }
+    .button.secondary:hover {
+      background-color: #545b62;
+    }
+    .toggle-section {
+      margin-bottom: 15px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      border: 1px solid #e9ecef;
+    }
+    .toggle-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toggle-label {
+      font-weight: bold;
+      color: #333;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 24px;
+      background-color: #ccc;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .toggle-switch.enabled {
+      background-color: #28a745;
+    }
+    .toggle-slider {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background-color: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .toggle-switch.enabled .toggle-slider {
+      transform: translateX(26px);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h3>TradingView Alert Forwarder</h3>
+  </div>
+  
+  <div id="status" class="status">
+    <span id="statusText">检查状态中...</span>
+  </div>
+  
+  <div class="toggle-section">
+    <div class="toggle-container">
+      <span class="toggle-label">启用警报转发</span>
+      <div id="toggleSwitch" class="toggle-switch">
+        <div class="toggle-slider"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="stats">
+    <div class="stats-item">
+      <span>总警报数:</span>
+      <span id="totalAlerts">0</span>
+    </div>
+    <div class="stats-item">
+      <span>最后警报:</span>
+      <span id="lastAlert">无</span>
+    </div>
+  </div>
+  
+  <button id="configBtn" class="button">打开配置</button>
+  <button id="testBtn" class="button secondary">测试连接</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

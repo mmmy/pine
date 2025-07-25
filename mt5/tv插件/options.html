@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TradingView Alert Forwarder - 配置</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="text"], input[type="url"], textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    input[type="checkbox"] {
+      margin-right: 10px;
+    }
+    .button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    .button:hover {
+      background-color: #0056b3;
+    }
+    .button.secondary {
+      background-color: #6c757d;
+    }
+    .button.secondary:hover {
+      background-color: #545b62;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      display: none;
+    }
+    .status.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .example {
+      background-color: #f8f9fa;
+      padding: 10px;
+      border: 1px solid #e9ecef;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TradingView Alert Forwarder 配置</h1>
+    
+    <form id="configForm">
+      <div class="form-group">
+        <label for="webhookUrl">Webhook URL *</label>
+        <input type="url" id="webhookUrl" placeholder="http://localhost:5000/webhook" required>
+        <div class="help-text">警报将发送到此URL</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="authToken">认证令牌 (可选)</label>
+        <input type="text" id="authToken" placeholder="Bearer token for authentication">
+        <div class="help-text">如果需要，将作为Authorization header发送</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="customHeaders">自定义请求头 (可选)</label>
+        <textarea id="customHeaders" placeholder='{"X-API-Key": "your-key", "Custom-Header": "value"}'></textarea>
+        <div class="help-text">JSON格式的自定义HTTP头</div>
+        <div class="example">
+示例:<br>
+{<br>
+&nbsp;&nbsp;"X-API-Key": "your-api-key",<br>
+&nbsp;&nbsp;"Content-Type": "application/json"<br>
+}
+        </div>
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="enabled" checked>
+        <label for="enabled">启用警报转发</label>
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <button type="submit" class="button">保存配置</button>
+        <button type="button" id="testBtn" class="button secondary">测试连接</button>
+        <button type="button" id="resetBtn" class="button secondary">重置</button>
+      </div>
+    </form>
+    
+    <div id="status" class="status"></div>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+      <h3>警报数据格式</h3>
+      <p>发送到您的URL的数据格式如下:</p>
+      <div class="example">
+{<br>
+&nbsp;&nbsp;"message": "做空 XAUUSD 仓位=0.05",<br>
+&nbsp;&nbsp;"alert": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"message": "做空 XAUUSD 仓位=0.05",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"symbol": "XAUUSD",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"price": "2650.00",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"type": "SELL",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"alertId": 37320364580,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"aid": 2687035109,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"fireTime": 1753432741,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"resolution": "1"<br>
+&nbsp;&nbsp;},<br>
+&nbsp;&nbsp;"timestamp": "2023-01-01T12:00:00.000Z",<br>
+&nbsp;&nbsp;"source": "https://tradingview.com/chart/...",<br>
+&nbsp;&nbsp;"extension": "TradingView Alert Forwarder v1.0",<br>
+&nbsp;&nbsp;"websocket": {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"alertId": 37320364580,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"fireTime": 1753432741,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"resolution": "1"<br>
+&nbsp;&nbsp;}<br>
+}
+      </div>
+    </div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>

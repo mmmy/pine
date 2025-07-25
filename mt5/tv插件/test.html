@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView Alert Forwarder - 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #2196F3;
+            margin-top: 0;
+        }
+        .button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background-color: #1976D2;
+        }
+        .button.danger {
+            background-color: #f44336;
+        }
+        .button.danger:hover {
+            background-color: #d32f2f;
+        }
+        .button.success {
+            background-color: #4CAF50;
+        }
+        .button.success:hover {
+            background-color: #45a049;
+        }
+        .log-area {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 TradingView Alert Forwarder 测试工具</h1>
+        
+        <div class="section">
+            <h2>📊 当前状态</h2>
+            <div id="status" class="status info">正在检查插件状态...</div>
+            <button class="button" onclick="checkStatus()">刷新状态</button>
+        </div>
+
+        <div class="section">
+            <h2>🔍 WebSocket 调试</h2>
+            <p>使用调试脚本来监控所有WebSocket连接和消息：</p>
+            <button class="button" onclick="loadDebugScript()">加载调试脚本</button>
+            <button class="button" onclick="generateReport()">生成报告</button>
+            <button class="button danger" onclick="clearLogs()">清除日志</button>
+        </div>
+
+        <div class="section">
+            <h2>🧪 连接测试</h2>
+            <p>测试与配置的Webhook URL的连接：</p>
+            <button class="button success" onclick="testWebhook()">测试Webhook连接</button>
+            <button class="button" onclick="sendTestAlert()">发送测试警报</button>
+        </div>
+
+        <div class="section">
+            <h2>📝 实时日志</h2>
+            <div id="logArea" class="log-area">等待日志输出...\n</div>
+            <button class="button" onclick="startLogCapture()">开始捕获日志</button>
+            <button class="button" onclick="stopLogCapture()">停止捕获</button>
+        </div>
+
+        <div class="section">
+            <h2>⚙️ 故障排除</h2>
+            <p>如果插件无法正常工作，请尝试以下步骤：</p>
+            <ol>
+                <li>确保在TradingView页面上使用此工具</li>
+                <li>检查浏览器控制台是否有错误信息</li>
+                <li>使用调试脚本监控WebSocket连接</li>
+                <li>验证Webhook URL配置是否正确</li>
+            </ol>
+            <button class="button" onclick="runDiagnostics()">运行诊断</button>
+        </div>
+    </div>
+
+    <script>
+        let logCapturing = false;
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function addLog(message) {
+            const logArea = document.getElementById('logArea');
+            const timestamp = new Date().toLocaleTimeString();
+            logArea.textContent += `[${timestamp}] ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function checkStatus() {
+            addLog('检查插件状态...');
+            
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.storage.sync.get(['enabled', 'webhookUrl'], (config) => {
+                    if (config.enabled && config.webhookUrl) {
+                        updateStatus('插件已启用并已配置', 'success');
+                        addLog(`插件状态: 已启用, Webhook: ${config.webhookUrl}`);
+                    } else if (config.webhookUrl) {
+                        updateStatus('插件已配置但未启用', 'error');
+                        addLog('插件状态: 已配置但未启用');
+                    } else {
+                        updateStatus('插件未配置', 'error');
+                        addLog('插件状态: 未配置Webhook URL');
+                    }
+                });
+            } else {
+                updateStatus('无法访问Chrome扩展API', 'error');
+                addLog('错误: 无法访问Chrome扩展API');
+            }
+        }
+
+        function loadDebugScript() {
+            addLog('加载调试脚本...');
+            
+            const script = document.createElement('script');
+            script.src = chrome.runtime.getURL('debug-websocket.js');
+            script.onload = () => {
+                addLog('调试脚本加载成功');
+                updateStatus('调试脚本已加载', 'success');
+            };
+            script.onerror = () => {
+                addLog('调试脚本加载失败');
+                updateStatus('调试脚本加载失败', 'error');
+            };
+            document.head.appendChild(script);
+        }
+
+        function generateReport() {
+            if (window.tradingViewDebug) {
+                addLog('生成WebSocket连接报告...');
+                window.tradingViewDebug.generateReport();
+                addLog('报告已生成，请查看浏览器控制台');
+            } else {
+                addLog('错误: 调试脚本未加载');
+            }
+        }
+
+        function testWebhook() {
+            addLog('测试Webhook连接...');
+            
+            chrome.storage.sync.get(['webhookUrl', 'authToken', 'customHeaders'], async (config) => {
+                if (!config.webhookUrl) {
+                    addLog('错误: 未配置Webhook URL');
+                    return;
+                }
+
+                try {
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+
+                    if (config.authToken) {
+                        headers['Authorization'] = `Bearer ${config.authToken}`;
+                    }
+
+                    if (config.customHeaders) {
+                        try {
+                            const customHeaders = JSON.parse(config.customHeaders);
+                            Object.assign(headers, customHeaders);
+                        } catch (error) {
+                            addLog('警告: 自定义请求头格式错误');
+                        }
+                    }
+
+                    const response = await fetch(config.webhookUrl, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({
+                            test: true,
+                            message: '测试连接',
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        addLog(`连接测试成功: HTTP ${response.status}`);
+                        updateStatus('Webhook连接测试成功', 'success');
+                    } else {
+                        addLog(`连接测试失败: HTTP ${response.status} ${response.statusText}`);
+                        updateStatus('Webhook连接测试失败', 'error');
+                    }
+                } catch (error) {
+                    addLog(`连接测试错误: ${error.message}`);
+                    updateStatus('Webhook连接测试错误', 'error');
+                }
+            });
+        }
+
+        function sendTestAlert() {
+            addLog('发送测试警报...');
+            
+            const testAlert = {
+                message: '测试警报 - BTCUSDT 价格突破 50000',
+                symbol: 'BTCUSDT',
+                price: '50000',
+                type: 'BUY',
+                timestamp: new Date().toISOString()
+            };
+
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                chrome.runtime.sendMessage({
+                    type: 'TRADINGVIEW_ALERT',
+                    data: testAlert,
+                    timestamp: testAlert.timestamp,
+                    url: window.location.href,
+                    source: 'test'
+                }, (response) => {
+                    if (response && response.success) {
+                        addLog('测试警报发送成功');
+                    } else {
+                        addLog('测试警报发送失败');
+                    }
+                });
+            } else {
+                addLog('错误: 无法发送测试警报');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logArea').textContent = '日志已清除...\n';
+        }
+
+        function startLogCapture() {
+            if (logCapturing) return;
+            
+            logCapturing = true;
+            addLog('开始捕获控制台日志...');
+
+            console.log = function(...args) {
+                originalConsoleLog.apply(console, args);
+                addLog('LOG: ' + args.join(' '));
+            };
+
+            console.error = function(...args) {
+                originalConsoleError.apply(console, args);
+                addLog('ERROR: ' + args.join(' '));
+            };
+        }
+
+        function stopLogCapture() {
+            if (!logCapturing) return;
+            
+            logCapturing = false;
+            console.log = originalConsoleLog;
+            console.error = originalConsoleError;
+            addLog('停止捕获控制台日志');
+        }
+
+        function runDiagnostics() {
+            addLog('运行系统诊断...');
+            
+            // 检查基本环境
+            addLog(`浏览器: ${navigator.userAgent}`);
+            addLog(`当前URL: ${window.location.href}`);
+            addLog(`WebSocket支持: ${window.WebSocket ? '是' : '否'}`);
+            addLog(`Chrome扩展API: ${typeof chrome !== 'undefined' ? '可用' : '不可用'}`);
+            
+            // 检查TradingView特定元素
+            const isTradingView = window.location.hostname.includes('tradingview.com');
+            addLog(`TradingView页面: ${isTradingView ? '是' : '否'}`);
+            
+            if (window.tradingViewDebug) {
+                const connections = window.tradingViewDebug.getAllConnections();
+                addLog(`WebSocket连接数: ${connections.length}`);
+                addLog(`消息总数: ${window.tradingViewDebug.getMessageCount()}`);
+            }
+            
+            addLog('诊断完成');
+        }
+
+        // 页面加载时自动检查状态
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            addLog('测试页面已加载');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "TradingView Alert Forwarder",
+  "version": "1.0",
+  "description": "监听TradingView警报并转发到指定URL",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "background"
+  ],
+  "host_permissions": [
+    "https://*.tradingview.com/*",
+    "https://www.tradingview.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.tradingview.com/*",
+        "https://www.tradingview.com/*"
+      ],
+      "js": ["dom-alert-monitor.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TradingView Alert Forwarder"
+  },
+  "options_page": "options.html"
+}
