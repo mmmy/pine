@@ -1,7 +1,7 @@
-// 弹窗警报监听测试脚本
-// 在TradingView页面控制台中运行此脚本来测试弹窗监听功能
+// WebSocket警报监听测试脚本
+// 在TradingView页面控制台中运行此脚本来测试WebSocket监听功能
 
-console.log('🧪 弹窗警报监听测试开始');
+console.log('🧪 WebSocket警报监听测试开始');
 
 // 创建测试弹窗警报元素
 function createTestPopupAlert(message, type = 'info') {
@@ -232,27 +232,76 @@ function testKeywordDetection() {
   });
 }
 
+// 测试WebSocket警报功能
+function testWebSocketAlert() {
+  console.log('🧪 测试WebSocket警报功能...');
+
+  if (window.tvAlertForwarder) {
+    console.log('✅ 发现调试接口，开始测试...');
+
+    // 获取当前状态
+    const status = window.tvAlertForwarder.getStatus();
+    console.log('📊 当前状态:', status);
+
+    // 测试警报
+    console.log('🚨 发送测试警报...');
+    window.tvAlertForwarder.testAlert('测试警报: XAUUSD 做空 仓位=0.05');
+
+    setTimeout(() => {
+      const newStatus = window.tvAlertForwarder.getStatus();
+      console.log('📊 测试后状态:', newStatus);
+    }, 2000);
+
+  } else {
+    console.log('❌ 未找到调试接口，请确保插件已正确加载');
+  }
+}
+
+// 检查WebSocket连接状态
+function checkWebSocketConnections() {
+  console.log('🔍 检查WebSocket连接状态...');
+
+  if (window.tvAlertForwarder) {
+    const connections = window.tvAlertForwarder.getConnections();
+    console.log('📡 WebSocket连接状态:', connections);
+
+    if (connections.total === 0) {
+      console.log('⚠️ 没有检测到TradingView WebSocket连接');
+      console.log('💡 请确保页面已完全加载，或尝试刷新页面');
+    } else {
+      console.log(`✅ 检测到 ${connections.total} 个WebSocket连接`);
+      connections.connections.forEach((conn, index) => {
+        console.log(`📡 连接 ${index + 1}:`, conn.url);
+      });
+    }
+  } else {
+    console.log('❌ 调试接口不可用');
+  }
+}
+
 // 主测试函数
-function runPopupMonitorTest() {
-  console.log('🚀 开始弹窗监听测试...\n');
+function runWebSocketMonitorTest() {
+  console.log('🚀 开始WebSocket监听测试...\n');
 
   console.log('📋 测试计划:');
-  console.log('1. 创建不同类型的弹窗警报');
-  console.log('2. 测试动态内容变化');
-  console.log('3. 创建TradingView样式弹窗');
-  console.log('4. 测试显示/隐藏状态变化');
-  console.log('5. 测试关键词检测');
+  console.log('1. 检查WebSocket连接状态');
+  console.log('2. 测试WebSocket警报功能');
+  console.log('3. 创建模拟弹窗（兼容性测试）');
+  console.log('4. 检查插件状态');
 
   // 按顺序执行测试
-  setTimeout(testDifferentPopupAlerts, 1000);
-  setTimeout(testDynamicContent, 10000);
-  setTimeout(createTradingViewStyleAlert, 18000);
-  setTimeout(testVisibilityToggle, 25000);
-  setTimeout(testKeywordDetection, 30000);
+  setTimeout(checkWebSocketConnections, 1000);
+  setTimeout(testWebSocketAlert, 3000);
+  setTimeout(createTradingViewStyleAlert, 6000);
+  setTimeout(() => {
+    if (window.tvAlertForwarder) {
+      console.log('📊 最终状态:', window.tvAlertForwarder.getStatus());
+    }
+  }, 10000);
 
-  console.log('\n✅ 测试已开始，请观察控制台输出和页面上的弹窗警报');
-  console.log('💡 如果弹窗监听工作正常，你应该看到新弹窗检测的日志');
-  console.log('🎯 注意：只有新出现的弹窗才会被检测，已存在的元素会被忽略');
+  console.log('\n✅ 测试已开始，请观察控制台输出');
+  console.log('💡 如果WebSocket监听工作正常，你应该看到警报检测的日志');
+  console.log('🎯 注意：此版本通过拦截WebSocket消息获取警报数据');
 }
 
 // 测试显示/隐藏状态变化
@@ -294,17 +343,24 @@ function testVisibilityToggle() {
 }
 
 // 暴露测试函数
-window.popupMonitorTest = {
-  run: runPopupMonitorTest,
+window.webSocketMonitorTest = {
+  run: runWebSocketMonitorTest,
+  checkConnections: checkWebSocketConnections,
+  testAlert: testWebSocketAlert,
   createPopup: createTestPopupAlert,
-  testDynamic: testDynamicContent,
   testTVStyle: createTradingViewStyleAlert,
-  testKeywords: testKeywordDetection,
-  testVisibility: testVisibilityToggle
+
+  // 便捷方法
+  status: () => window.tvAlertForwarder ? window.tvAlertForwarder.getStatus() : null,
+  connections: () => window.tvAlertForwarder ? window.tvAlertForwarder.getConnections() : null
 };
 
 // 自动运行测试
-runPopupMonitorTest();
+runWebSocketMonitorTest();
 
-console.log('\n🔧 测试函数已暴露到 window.popupMonitorTest');
-console.log('可以单独运行: window.popupMonitorTest.createPopup("Test Popup Alert")');
+console.log('\n🔧 测试函数已暴露到 window.webSocketMonitorTest');
+console.log('可以单独运行:');
+console.log('- window.webSocketMonitorTest.checkConnections()');
+console.log('- window.webSocketMonitorTest.testAlert()');
+console.log('- window.webSocketMonitorTest.status()');
+console.log('- window.tvAlertForwarder.testAlert("自定义消息")');

@@ -1,15 +1,16 @@
-// TradingView Alert Forwarder - 弹窗警报监听版本
-// 专门监听刚触发的弹窗警报，不处理已存在的警报
+// TradingView Alert Forwarder - WebSocket监听版本
+// 通过拦截WebSocket消息来获取实时警报数据
 
 (() => {
-  console.log('🚀 TradingView Alert Forwarder: 弹窗警报监听模式启动');
+  console.log('🚀 TradingView Alert Forwarder: WebSocket监听模式启动');
   console.log('🚀 当前时间:', new Date().toISOString());
   console.log('🚀 当前URL:', window.location.href);
 
   let alertCount = 0;
   let isEnabled = true;
-  let observer = null;
+  let originalWebSocket = null;
   let processedAlerts = new Set(); // 记录已处理的警报，避免重复
+  let monitoredConnections = new Map(); // 记录监听的WebSocket连接
 
   // 检查插件是否启用
   function checkEnabled(callback) {
@@ -23,296 +24,339 @@
     }
   }
 
-  // TradingView弹窗警报的特定选择器
-  const popupAlertSelectors = [
-    // TradingView弹窗对话框
-    '[data-name="alerts-popup"]',
-    '[data-name="alert-popup"]',
-    '[data-name="notification-popup"]',
-    '[data-name="toast-popup"]',
-
-    // 弹窗容器类
-    '.tv-dialog',
-    '.tv-popup',
-    '.tv-toast',
-    '.tv-notification-popup',
-
-    // 通用弹窗选择器（但要确保是新出现的）
-    '[role="dialog"][aria-live]',
-    '[role="alertdialog"]',
-    '.popup-dialog',
-    '.alert-dialog',
-
-    // 可能的警报弹窗类名模式
-    '[class*="popup"][class*="alert"]',
-    '[class*="dialog"][class*="alert"]',
-    '[class*="toast"][class*="show"]',
-    '[class*="notification"][class*="show"]'
+  // WebSocket URL模式匹配
+  const WEBSOCKET_PATTERNS = [
+    /wss:\/\/pushstream\.tradingview\.com\/message-pipe-ws\/private_/,
+    /wss:\/\/.*\.tradingview\.com.*\/message-pipe-ws/,
+    /wss:\/\/.*tradingview.*\/ws/
   ];
 
-  // 检测元素是否是新出现的弹窗警报
-  function isNewPopupAlert(element) {
-    if (!element || !element.textContent) return false;
-
-    const text = element.textContent.toLowerCase();
-    const className = element.className ? element.className.toLowerCase() : '';
-    const dataName = element.getAttribute('data-name') || '';
-
-    // 检查是否是弹窗元素
-    const isPopup = className.includes('popup') ||
-                   className.includes('dialog') ||
-                   className.includes('toast') ||
-                   dataName.includes('popup') ||
-                   dataName.includes('dialog') ||
-                   element.getAttribute('role') === 'dialog' ||
-                   element.getAttribute('role') === 'alertdialog';
-
-    // 检查是否包含警报关键词
-    const alertKeywords = [
-      'alert', '警报', '提醒', 'notification', 'triggered', '触发',
-      'buy', 'sell', '买入', '卖出', '做多', '做空',
-      'price', '价格', 'target', '目标', 'stop', '止损',
-      'breakout', '突破', 'support', '支撑', 'resistance', '阻力'
-    ];
-
-    const hasAlertKeyword = alertKeywords.some(keyword => text.includes(keyword));
-
-    // 检查元素的可见性和位置（弹窗通常是fixed或absolute定位）
-    const computedStyle = window.getComputedStyle(element);
-    const isVisible = element.offsetWidth > 0 && element.offsetHeight > 0;
-    const isPositioned = computedStyle.position === 'fixed' ||
-                        computedStyle.position === 'absolute' ||
-                        computedStyle.zIndex > 1000;
-
-    // 生成唯一标识符避免重复处理
-    const elementId = element.outerHTML.substring(0, 200) + text.substring(0, 100);
-
-    if (processedAlerts.has(elementId)) {
-      return false; // 已经处理过的警报
-    }
-
-    const isNewAlert = isPopup && hasAlertKeyword && isVisible && isPositioned;
-
-    if (isNewAlert) {
-      processedAlerts.add(elementId);
-      // 清理旧的记录，避免内存泄漏
-      if (processedAlerts.size > 100) {
-        const firstItem = processedAlerts.values().next().value;
-        processedAlerts.delete(firstItem);
-      }
-    }
-
-    return isNewAlert;
+  // 检查是否是TradingView的WebSocket连接
+  function isTradingViewWebSocket(url) {
+    return WEBSOCKET_PATTERNS.some(pattern => pattern.test(url));
   }
 
-  // 提取警报信息
-  function extractAlertInfo(element) {
-    const text = element.textContent.trim();
-    
-    // 尝试提取交易对
-    const symbolMatch = text.match(/([A-Z]{2,10}[\/:]?[A-Z]{2,10})/);
-    const symbol = symbolMatch ? symbolMatch[1] : 'UNKNOWN';
+  // 解析WebSocket警报消息
+  function parseAlertMessage(data) {
+    try {
+      const message = JSON.parse(data);
 
-    // 尝试提取价格
-    const priceMatch = text.match(/[\d,]+\.?\d*/);
-    const price = priceMatch ? priceMatch[0] : null;
+      // 检查是否是警报频道的消息
+      if (message.text && message.text.channel === 'alert' && message.text.content) {
+        const content = JSON.parse(message.text.content);
 
-    // 判断警报类型
-    let type = 'ALERT';
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes('buy') || lowerText.includes('做多') || lowerText.includes('买入')) {
-      type = 'BUY';
-    } else if (lowerText.includes('sell') || lowerText.includes('做空') || lowerText.includes('卖出')) {
-      type = 'SELL';
-    }
+        // 检查是否是事件消息且包含警报数据
+        if (content.m === 'event' && content.p) {
+          const alertData = content.p;
 
-    return {
-      message: text,
-      symbol: symbol,
-      price: price,
-      type: type,
-      html: element.outerHTML,
-      className: element.className,
-      timestamp: new Date().toISOString()
-    };
-  }
+          // 生成唯一标识符避免重复处理
+          const alertId = `${alertData.id}_${alertData.fire_time}`;
 
-  // 处理检测到的警报
-  function processAlert(alertData) {
-    alertCount++;
-    console.log(`🚨 警报 #${alertCount} 检测到:`, alertData.message);
-    
-    // 发送到background script
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({
-        type: 'TRADINGVIEW_ALERT',
-        data: alertData,
-        timestamp: alertData.timestamp,
-        url: window.location.href,
-        source: 'dom'
-      }, (response) => {
-        if (response && response.success) {
-          console.log('✅ 警报已发送到background script');
-        } else {
-          console.log('❌ 发送警报失败');
-        }
-      });
-    }
-  }
-
-  // DOM变化监听器 - 专门监听新出现的弹窗
-  function handleDOMChanges(mutations) {
-    if (!isEnabled) return;
-
-    mutations.forEach(mutation => {
-      // 只关注新增的节点（新出现的弹窗）
-      mutation.addedNodes.forEach(node => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          console.log('🔍 检测到新DOM节点:', node.tagName, node.className);
-
-          // 检查节点本身是否是弹窗警报
-          if (isNewPopupAlert(node)) {
-            console.log('🎯 发现新弹窗警报:', node);
-            const alertData = extractAlertInfo(node);
-            processAlert(alertData);
-            return; // 找到就不再检查子元素
+          if (processedAlerts.has(alertId)) {
+            console.log('⚠️ 警报已处理，跳过:', alertId);
+            return null;
           }
 
-          // 检查节点的直接子元素中是否有弹窗警报
-          popupAlertSelectors.forEach(selector => {
-            try {
-              const alertElements = node.querySelectorAll ? node.querySelectorAll(selector) : [];
-              alertElements.forEach(element => {
-                if (isNewPopupAlert(element)) {
-                  console.log('🎯 在子元素中发现新弹窗警报:', element);
-                  const alertData = extractAlertInfo(element);
-                  processAlert(alertData);
-                }
-              });
-            } catch (error) {
-              console.warn('选择器错误:', selector, error);
+          processedAlerts.add(alertId);
+
+          // 清理旧的记录，避免内存泄漏
+          if (processedAlerts.size > 100) {
+            const firstItem = processedAlerts.values().next().value;
+            processedAlerts.delete(firstItem);
+          }
+
+          return {
+            message: alertData.desc || 'TradingView Alert',
+            symbol: alertData.sym || 'UNKNOWN',
+            price: null, // WebSocket消息中没有直接的价格信息
+            type: determineAlertType(alertData.desc || ''),
+            alertId: alertData.id,
+            aid: alertData.aid,
+            fireTime: alertData.fire_time,
+            barTime: alertData.bar_time,
+            resolution: alertData.res,
+            soundEnabled: alertData.snd,
+            popupEnabled: alertData.popup,
+            timestamp: new Date().toISOString()
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('解析WebSocket消息失败:', error, data);
+    }
+
+    return null;
+  }
+
+  // 判断警报类型
+  function determineAlertType(description) {
+    if (!description) return 'ALERT';
+
+    const lowerDesc = description.toLowerCase();
+    if (lowerDesc.includes('买入') || lowerDesc.includes('做多') || lowerDesc.includes('buy') || lowerDesc.includes('long')) {
+      return 'BUY';
+    }
+    if (lowerDesc.includes('卖出') || lowerDesc.includes('做空') || lowerDesc.includes('sell') || lowerDesc.includes('short')) {
+      return 'SELL';
+    }
+    return 'ALERT';
+  }
+
+  // WebSocket消息拦截器
+  function interceptWebSocket() {
+    if (originalWebSocket) {
+      console.log('⚠️ WebSocket已被拦截，跳过重复拦截');
+      return;
+    }
+
+    originalWebSocket = window.WebSocket;
+
+    window.WebSocket = function(url, protocols) {
+      console.log('🔍 WebSocket连接检测:', url);
+
+      const ws = new originalWebSocket(url, protocols);
+
+      // 检查是否是TradingView的WebSocket
+      if (isTradingViewWebSocket(url)) {
+        console.log('🎯 TradingView WebSocket连接已拦截:', url);
+
+        const connectionId = Date.now() + Math.random();
+        monitoredConnections.set(connectionId, {
+          url: url,
+          ws: ws,
+          startTime: new Date().toISOString()
+        });
+
+        // 拦截消息接收
+        const originalOnMessage = ws.onmessage;
+        ws.onmessage = function(event) {
+          if (isEnabled) {
+            handleWebSocketMessage(event.data, url);
+          }
+
+          // 调用原始的消息处理器
+          if (originalOnMessage) {
+            originalOnMessage.call(this, event);
+          }
+        };
+
+        // 监听连接关闭
+        const originalOnClose = ws.onclose;
+        ws.onclose = function(event) {
+          console.log('🔌 TradingView WebSocket连接关闭:', url);
+          monitoredConnections.delete(connectionId);
+
+          if (originalOnClose) {
+            originalOnClose.call(this, event);
+          }
+        };
+
+        // 监听连接错误
+        const originalOnError = ws.onerror;
+        ws.onerror = function(event) {
+          console.error('❌ TradingView WebSocket连接错误:', url, event);
+
+          if (originalOnError) {
+            originalOnError.call(this, event);
+          }
+        };
+      }
+
+      return ws;
+    };
+
+    // 保持原始WebSocket的属性
+    Object.setPrototypeOf(window.WebSocket, originalWebSocket);
+    window.WebSocket.prototype = originalWebSocket.prototype;
+
+    console.log('✅ WebSocket拦截器已安装');
+  }
+
+  // 处理WebSocket消息
+  function handleWebSocketMessage(data, url) {
+    try {
+      const alertData = parseAlertMessage(data);
+
+      if (alertData) {
+        alertCount++;
+        console.log(`🚨 WebSocket警报 #${alertCount} 检测到:`, alertData.message);
+        console.log('📊 警报详情:', alertData);
+
+        // 发送到background script
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+          chrome.runtime.sendMessage({
+            type: 'TRADINGVIEW_ALERT',
+            data: alertData,
+            timestamp: alertData.timestamp,
+            url: window.location.href,
+            source: 'websocket'
+          }, (response) => {
+            if (response && response.success) {
+              console.log('✅ WebSocket警报已发送到background script');
+            } else {
+              console.log('❌ 发送WebSocket警报失败', response);
             }
           });
         }
-      });
+      }
+    } catch (error) {
+      console.warn('处理WebSocket消息时出错:', error);
+    }
+  }
 
-      // 检查属性变化（可能是弹窗显示/隐藏状态变化）
-      if (mutation.type === 'attributes') {
-        const target = mutation.target;
-        if (mutation.attributeName === 'style' ||
-            mutation.attributeName === 'class' ||
-            mutation.attributeName === 'aria-hidden') {
+  // 获取WebSocket连接状态
+  function getWebSocketStatus() {
+    const connections = Array.from(monitoredConnections.values());
+    return {
+      total: connections.length,
+      connections: connections.map(conn => ({
+        url: conn.url,
+        startTime: conn.startTime,
+        readyState: conn.ws.readyState
+      }))
+    };
+  }
 
-          // 检查是否是从隐藏变为显示的弹窗
-          const isNowVisible = target.offsetWidth > 0 && target.offsetHeight > 0;
-          const wasHidden = mutation.oldValue &&
-                           (mutation.oldValue.includes('display: none') ||
-                            mutation.oldValue.includes('visibility: hidden') ||
-                            mutation.oldValue.includes('aria-hidden="true"'));
+  // 清理函数
+  function cleanup() {
+    if (originalWebSocket) {
+      window.WebSocket = originalWebSocket;
+      originalWebSocket = null;
+      console.log('🧹 WebSocket拦截器已清理');
+    }
 
-          if (isNowVisible && wasHidden && isNewPopupAlert(target)) {
-            console.log('🎯 发现显示状态变化的弹窗警报:', target);
-            const alertData = extractAlertInfo(target);
-            processAlert(alertData);
+    monitoredConnections.clear();
+    processedAlerts.clear();
+  }
+
+  // 启动WebSocket监听
+  function startWebSocketMonitoring() {
+    console.log('🔍 启动WebSocket警报监听...');
+
+    // 安装WebSocket拦截器
+    interceptWebSocket();
+
+    console.log('✅ WebSocket警报监听已启动');
+
+    // 定期检查WebSocket连接状态
+    setInterval(() => {
+      const status = getWebSocketStatus();
+      console.log(`📊 WebSocket状态: ${status.total} 个连接监听中`);
+
+      if (status.total === 0) {
+        console.log('⚠️ 没有检测到TradingView WebSocket连接，请确保页面已完全加载');
+      }
+    }, 30000);
+  }
+
+  // 暴露调试接口
+  function exposeDebugInterface() {
+    window.tvAlertForwarder = {
+      getStatus: () => ({
+        enabled: isEnabled,
+        alertCount: alertCount,
+        processedAlerts: processedAlerts.size,
+        webSocketStatus: getWebSocketStatus()
+      }),
+
+      getConnections: () => getWebSocketStatus(),
+
+      cleanup: cleanup,
+
+      testAlert: (message = '测试警报: BTCUSD 50000') => {
+        const testData = {
+          message: message,
+          symbol: 'BTCUSD',
+          price: '50000',
+          type: 'BUY',
+          alertId: Date.now(),
+          aid: 123456,
+          fireTime: Math.floor(Date.now() / 1000),
+          barTime: Math.floor(Date.now() / 1000),
+          resolution: '1',
+          soundEnabled: false,
+          popupEnabled: true,
+          timestamp: new Date().toISOString()
+        };
+
+        handleWebSocketMessage(JSON.stringify({
+          text: {
+            channel: 'alert',
+            content: JSON.stringify({
+              m: 'event',
+              p: {
+                id: testData.alertId,
+                aid: testData.aid,
+                fire_time: testData.fireTime,
+                bar_time: testData.barTime,
+                sym: testData.symbol,
+                res: testData.resolution,
+                desc: testData.message,
+                snd: testData.soundEnabled,
+                popup: testData.popupEnabled
+              }
+            })
           }
-        }
+        }), 'test://localhost');
       }
-    });
-  }
+    };
 
-  // 启动DOM监听 - 专门监听弹窗出现
-  function startDOMMonitoring() {
-    console.log('🔍 启动弹窗警报监听...');
-
-    observer = new MutationObserver(handleDOMChanges);
-
-    // 监听配置：重点关注新增节点和属性变化
-    observer.observe(document.body, {
-      childList: true,        // 监听子节点变化（新弹窗出现）
-      subtree: true,          // 监听所有后代节点
-      attributes: true,       // 监听属性变化（显示/隐藏状态）
-      attributeOldValue: true, // 记录属性旧值
-      attributeFilter: ['class', 'style', 'aria-hidden', 'data-name'] // 只监听相关属性
-    });
-
-    console.log('✅ 弹窗警报监听已启动');
-  }
-
-  // 不再扫描现有元素，只监听新出现的弹窗
-  // function scanExistingElements() - 已移除
-
-  // 监听可能触发弹窗的事件
-  function setupTriggerMonitoring() {
-    // 监听可能触发警报弹窗的事件
-    document.addEventListener('click', (event) => {
-      const target = event.target;
-
-      // 检查是否点击了可能触发警报的元素
-      if (target && (
-        target.textContent.includes('警报') ||
-        target.textContent.includes('Alert') ||
-        target.className.includes('alert') ||
-        target.className.includes('notification') ||
-        target.getAttribute('data-name')?.includes('alert')
-      )) {
-        console.log('🖱️ 检测到可能触发警报的点击:', target);
-        // 不需要主动扫描，DOM监听器会自动捕获新出现的弹窗
-      }
-    });
-
-    // 监听键盘事件（可能的快捷键触发）
-    document.addEventListener('keydown', (event) => {
-      // 一些可能触发警报的快捷键组合
-      if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
-        console.log('🎹 检测到可能的警报快捷键');
-      }
-    });
+    console.log('🔧 调试接口已暴露到 window.tvAlertForwarder');
   }
 
   // 初始化
   function initialize() {
     checkEnabled((enabled) => {
       if (!enabled) {
-        console.log('⚠️ 插件已禁用，跳过弹窗监听');
+        console.log('⚠️ 插件已禁用，跳过WebSocket监听');
         return;
       }
 
-      console.log('🚀 初始化弹窗警报监听器...');
+      console.log('🚀 初始化WebSocket警报监听器...');
 
-      // 等待页面完全加载
+      // 等待页面完全加载后再启动WebSocket拦截
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
-            startDOMMonitoring();
-            setupTriggerMonitoring();
-          }, 1000);
+            startWebSocketMonitoring();
+            exposeDebugInterface();
+          }, 2000); // 增加延迟确保TradingView完全加载
         });
       } else {
         setTimeout(() => {
-          startDOMMonitoring();
-          setupTriggerMonitoring();
-        }, 1000);
+          startWebSocketMonitoring();
+          exposeDebugInterface();
+        }, 2000);
       }
 
       // 定期检查状态
       setInterval(() => {
-        console.log(`📊 弹窗监听状态: ${alertCount} 个新警报检测到`);
+        const status = getWebSocketStatus();
+        console.log(`📊 WebSocket监听状态: ${alertCount} 个警报检测到`);
         console.log(`📊 已处理警报数量: ${processedAlerts.size}`);
-      }, 30000);
+        console.log(`📊 监听连接数: ${status.total}`);
+      }, 60000); // 减少日志频率
     });
   }
 
-  // 页面可见性变化时不需要扫描，只需要确保监听器正常工作
+  // 页面可见性变化时检查WebSocket连接状态
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      console.log('👁️ 页面重新可见，弹窗监听器继续工作...');
-      // 不扫描现有元素，只等待新弹窗出现
+      console.log('👁️ 页面重新可见，检查WebSocket连接状态...');
+      const status = getWebSocketStatus();
+      if (status.total === 0) {
+        console.log('⚠️ 没有活跃的WebSocket连接，可能需要刷新页面');
+      }
     }
   });
+
+  // 页面卸载时清理
+  window.addEventListener('beforeunload', cleanup);
 
   // 启动
   initialize();
 
-  console.log('✅ TradingView 弹窗警报监听器已加载');
-  console.log('🎯 只监听新出现的弹窗警报，不处理已存在的警报');
+  console.log('✅ TradingView WebSocket警报监听器已加载');
+  console.log('🎯 通过拦截WebSocket消息获取实时警报数据');
+  console.log('🔧 使用 window.tvAlertForwarder 访问调试接口');
 })();
