@@ -68,21 +68,7 @@ trading:
         timezone: "Asia/Tokyo"
         description: "东京交易时段"
 
-      # 自定义时段1
-      custom1:
-        name: "自定义时段1"
-        start_time: "09:00"
-        end_time: "17:00"
-        timezone: "UTC"
-        description: "标准工作时间"
 
-      # 自定义时段2
-      custom2:
-        name: "自定义时段2"
-        start_time: "22:00"
-        end_time: "06:00"
-        timezone: "Asia/Shanghai"
-        description: "夜间交易时段"
 
 # Logging Settings
 logging:

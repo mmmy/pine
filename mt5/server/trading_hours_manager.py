@@ -34,13 +34,12 @@ class TradingHoursManager:
 
         self.logger.info(f"Trading hours manager initialized with {len(self.predefined_intervals)} predefined intervals")
     
-    def enable_trading_hours(self, intervals: str = None, **kwargs) -> Dict[str, Any]:
+    def enable_trading_hours(self, intervals: str = None) -> Dict[str, Any]:
         """
         Enable trading hours restriction.
 
         Args:
             intervals: Comma-separated list of interval IDs to enable (e.g., "europe,america")
-            **kwargs: Additional parameters for custom intervals
 
         Returns:
             Result dictionary
@@ -72,52 +71,25 @@ class TradingHoursManager:
                     raise ValidationError(f"No valid intervals found in: {intervals}")
 
             else:
-                # Enable custom interval from parameters
-                start_time = kwargs.get('start_time')
-                end_time = kwargs.get('end_time')
-                timezone = kwargs.get('timezone', self.default_timezone)
-
-                if not start_time or not end_time:
-                    raise ValidationError("start_time and end_time are required for custom intervals")
-
-                # Validate time format
-                start_time_obj = datetime.strptime(start_time, "%H:%M").time()
-                end_time_obj = datetime.strptime(end_time, "%H:%M").time()
-
-                # Validate timezone
-                try:
-                    pytz.timezone(timezone)
-                except pytz.exceptions.UnknownTimeZoneError:
-                    raise ValidationError(f"Invalid timezone: {timezone}")
-
-                # Create custom interval
-                custom_interval = {
-                    'name': '自定义时间区间',
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'timezone': timezone,
-                    'description': 'Custom trading hours'
-                }
-
-                self.enabled = True
-                self.active_intervals = ['custom']
-                self.predefined_intervals['custom'] = custom_interval
-
-                self.logger.info(f"Trading hours enabled: {start_time} - {end_time} ({timezone})")
-
+                # Show available intervals if no specific intervals provided
                 return {
                     'success': True,
-                    'message': 'Custom trading hours enabled',
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'timezone': timezone,
-                    'enabled': True
+                    'message': 'Available predefined intervals',
+                    'available_intervals': {
+                        id: {
+                            'name': interval['name'],
+                            'time': f"{interval['start_time']}-{interval['end_time']}",
+                            'timezone': interval['timezone'],
+                            'description': interval.get('description', '')
+                        }
+                        for id, interval in self.predefined_intervals.items()
+                    },
+                    'usage_examples': [
+                        '开启时间区间 时间区间=europe,america',
+                        '开启时间区间 时间区间=asia'
+                    ]
                 }
 
-        except ValueError as e:
-            error_msg = f"Invalid time format. Use HH:MM format: {e}"
-            self.logger.error(error_msg)
-            raise ValidationError(error_msg)
         except Exception as e:
             error_msg = f"Failed to enable trading hours: {e}"
             self.logger.error(error_msg)
@@ -306,40 +278,8 @@ class TradingHoursManager:
                 # Check for predefined intervals
                 intervals = params.get('intervals') or params.get('时间区间')
 
-                if intervals:
-                    # Enable predefined intervals
-                    return self.enable_trading_hours(intervals=intervals)
-                else:
-                    # Enable custom interval
-                    start_time = params.get('start_time') or params.get('开始时间')
-                    end_time = params.get('end_time') or params.get('结束时间')
-                    timezone = params.get('timezone') or params.get('时区')
-
-                    if start_time and end_time:
-                        return self.enable_trading_hours(
-                            start_time=start_time,
-                            end_time=end_time,
-                            timezone=timezone
-                        )
-                    else:
-                        # If no specific parameters, show available intervals
-                        return {
-                            'success': True,
-                            'message': 'Available predefined intervals',
-                            'available_intervals': {
-                                id: {
-                                    'name': interval['name'],
-                                    'time': f"{interval['start_time']}-{interval['end_time']}",
-                                    'timezone': interval['timezone'],
-                                    'description': interval.get('description', '')
-                                }
-                                for id, interval in self.predefined_intervals.items()
-                            },
-                            'usage_examples': [
-                                '开启时间区间 时间区间=europe,america',
-                                '开启时间区间 开始时间=09:00 结束时间=17:00 时区=UTC'
-                            ]
-                        }
+                # Enable predefined intervals or show available intervals
+                return self.enable_trading_hours(intervals=intervals)
 
             elif action == 'disable_trading_hours':
                 intervals = params.get('intervals') or params.get('时间区间')

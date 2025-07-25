@@ -224,7 +224,6 @@ Content-Type: text/plain
   - 备注=交易说明 或 注释=交易说明
   - 订单号=123456 或 票号=123456
   - 滑点=5 或 最大滑点=5
-  - 开始时间=09:00 结束时间=17:00 时区=UTC （自定义时间区间）
   - 时间区间=europe,america （预定义时间区间）
 
 - **开关参数**：只写中文名称，不带等号
@@ -449,7 +448,6 @@ curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "开
 
 # 测试时间区间控制
 curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "开启时间区间 时间区间=europe,america"
-curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "开启时间区间 开始时间=09:00 结束时间=17:00 时区=UTC"
 curl -X POST http://127.0.0.1:5000/webhook -H "Content-Type: text/plain" -d "关闭时间区间"
 ```
 

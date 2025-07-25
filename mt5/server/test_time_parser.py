@@ -10,9 +10,9 @@ def test_time_commands():
     """Test time interval commands."""
     
     test_messages = [
-        "开启时间区间 开始时间=09:00 结束时间=17:00 时区=UTC",
+        "开启时间区间 时间区间=europe,america",
         "关闭时间区间",
-        "设置时间区间 开始时间=22:00 结束时间=06:00"
+        "开启时间区间"
     ]
     
     for message in test_messages:

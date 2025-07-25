@@ -54,9 +54,6 @@ class ChineseMessageParser:
         '滑点': 'deviation',
         '最大滑点': 'deviation',
         # 时间区间相关参数
-        '开始时间': 'start_time',
-        '结束时间': 'end_time',
-        '时区': 'timezone',
         '时间区间': 'intervals',
         '区间': 'intervals'
         # 移除账户相关参数，现在只使用当前登录的MT5账户
@@ -298,7 +295,7 @@ class ChineseMessageParser:
         standard_fields = ['symbol', 'volume', 'sl', 'tp', 'price', 'comment', 'magic', 'ticket']
 
         # 时间区间相关参数
-        time_fields = ['start_time', 'end_time', 'timezone', 'intervals']
+        time_fields = ['intervals']
 
         # 根据操作类型选择要复制的字段
         if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
