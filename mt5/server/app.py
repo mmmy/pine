@@ -7,6 +7,7 @@ A Flask-based HTTP server for executing MT5 trades via webhook calls.
 import os
 import sys
 import logging
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -158,6 +159,22 @@ def webhook():
             payload = request.get_json()
             if not payload:
                 return jsonify({'error': 'No JSON payload provided'}), 400
+            # 检查是否为测试模式
+            if payload.get('test') is True:
+                logger.info(f"Test mode enabled, returning mock response for payload: {payload}")
+                return jsonify({
+                    'success': True,
+                    'message': 'Test mode - operation simulated successfully',
+                    'result': {
+                        'action': payload.get('action', 'unknown'),
+                        'symbol': payload.get('symbol', 'TEST'),
+                        'volume': payload.get('volume', 0.01),
+                        'price': 1.0000,
+                        'ticket': 999999999,
+                        'timestamp': datetime.now().isoformat(),
+                        'test_mode': True
+                    }
+                })
 
             # Check if it's Chinese message format in JSON
             if 'message' in payload and isinstance(payload['message'], str):
