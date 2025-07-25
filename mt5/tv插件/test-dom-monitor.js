@@ -263,19 +263,32 @@ function checkWebSocketConnections() {
 
   if (window.tvAlertForwarder) {
     const connections = window.tvAlertForwarder.getConnections();
-    console.log('📡 WebSocket连接状态:', connections);
+    const allConnections = window.tvAlertForwarder.getAllConnections();
+
+    console.log('📡 TradingView WebSocket连接状态:', connections);
+    console.log(`📊 总WebSocket连接数: ${allConnections.length}`);
 
     if (connections.total === 0) {
       console.log('⚠️ 没有检测到TradingView WebSocket连接');
-      console.log('💡 请确保页面已完全加载，或尝试刷新页面');
+
+      if (allConnections.length > 0) {
+        console.log('🔍 但检测到其他WebSocket连接:');
+        window.tvAlertForwarder.showAllConnections();
+        console.log('💡 可能需要更新URL匹配模式');
+      } else {
+        console.log('💡 没有检测到任何WebSocket连接，可能需要:');
+        console.log('   1. 刷新页面');
+        console.log('   2. 等待TradingView完全加载');
+        console.log('   3. 重新安装拦截器: window.tvAlertForwarder.reinstallInterceptor()');
+      }
     } else {
-      console.log(`✅ 检测到 ${connections.total} 个WebSocket连接`);
+      console.log(`✅ 检测到 ${connections.total} 个TradingView WebSocket连接`);
       connections.connections.forEach((conn, index) => {
         console.log(`📡 连接 ${index + 1}:`, conn.url);
       });
     }
   } else {
-    console.log('❌ 调试接口不可用');
+    console.log('❌ 调试接口不可用，插件可能未正确加载');
   }
 }
 
