@@ -1,29 +1,5 @@
 # MT5 Trading HTTP Server Configuration
 
-# MT5 Connection Settings
-mt5:
-  # MT5 terminal path (optional, auto-detect if not specified)
-  terminal_path: ""
-  
-  # MT5 connection settings (使用当前已登录的MT5客户端)
-  # 不需要账户配置，直接使用MT5客户端当前登录的账户
-  
-  # Connection timeout settings
-  timeout:
-    connect: 30  # Connection timeout in seconds
-    trade: 10    # Trade operation timeout in seconds
-
-# HTTP Server Settings
-server:
-  host: "127.0.0.1"  # Server host
-  port: 5000         # Server port
-  debug: false       # Debug mode (set to true for development)
-  
-  # API Security
-  security:
-    api_key: ""      # API key for authentication (leave empty to disable)
-    allowed_ips: []  # List of allowed IP addresses (empty = allow all)
-
 # Trading Settings
 trading:
   # Default trading parameters
@@ -38,8 +14,6 @@ trading:
   # Allowed symbols (empty = allow all)
   allowed_symbols: []
   
-  # Trading time restrictions (通过webhook "开启时间区间" 控制)
-
 # 自定义时间段配置 (通过 "开启时间区间" 控制)
 # 默认关闭，只能通过webhook命令开启/关闭
 custom_intervals:
@@ -64,7 +38,36 @@ custom_intervals:
     timezone: "GMT+8"
     description: "亚洲交易时段"
 
+  interval4:
+    name: "自定义时段4"
+    start_time: "13:00"
+    end_time: "15:00"
+    timezone: "GMT+8"
+    description: "亚洲交易时段"
 
+# MT5 Connection Settings
+mt5:
+  # MT5 terminal path (optional, auto-detect if not specified)
+  terminal_path: ""
+  
+  # MT5 connection settings (使用当前已登录的MT5客户端)
+  # 不需要账户配置，直接使用MT5客户端当前登录的账户
+  
+  # Connection timeout settings
+  timeout:
+    connect: 30  # Connection timeout in seconds
+    trade: 10    # Trade operation timeout in seconds
+
+# HTTP Server Settings
+server:
+  host: "127.0.0.1"  # Server host
+  port: 5000         # Server port
+  debug: false       # Debug mode (set to true for development)
+  
+  # API Security
+  security:
+    api_key: ""      # API key for authentication (leave empty to disable)
+    allowed_ips: []  # List of allowed IP addresses (empty = allow all)
 
 # Logging Settings
 logging:

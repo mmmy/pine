@@ -170,14 +170,8 @@ class TradingManager:
         if mt5_symbol_info is None:
             raise TradingError(f"Failed to get MT5 symbol info for {symbol}")
 
-        # Determine appropriate filling mode
-        filling_mode = mt5.ORDER_FILLING_FOK
-        if mt5_symbol_info.filling_mode & 1:  # FOK supported
-            filling_mode = mt5.ORDER_FILLING_FOK
-        elif mt5_symbol_info.filling_mode & 2:  # IOC supported
-            filling_mode = mt5.ORDER_FILLING_IOC
-        else:  # Return supported
-            filling_mode = mt5.ORDER_FILLING_RETURN
+        # Determine appropriate filling mode based on symbol support
+        filling_mode = self._get_optimal_filling_mode(mt5_symbol_info)
 
         # Create order request
         request = {
@@ -277,7 +271,14 @@ class TradingManager:
                     raise TradingError(f"Failed to get symbol info for {symbol}")
                 
                 price = symbol_info['bid'] if position['type'] == 0 else symbol_info['ask']
-                
+
+                # Get MT5 symbol info for filling mode
+                mt5_symbol_info = mt5.symbol_info(symbol)
+                if mt5_symbol_info is None:
+                    raise TradingError(f"Failed to get MT5 symbol info for {symbol}")
+
+                filling_mode = self._get_optimal_filling_mode(mt5_symbol_info)
+
                 # Create close request
                 request = {
                     'action': mt5.TRADE_ACTION_DEAL,
@@ -289,7 +290,7 @@ class TradingManager:
                     'magic': position['magic'],
                     'comment': f"Close {position['ticket']}",
                     'type_time': mt5.ORDER_TIME_GTC,
-                    'type_filling': mt5.ORDER_FILLING_IOC,
+                    'type_filling': filling_mode,
                 }
                 
                 # Execute close order
@@ -423,6 +424,47 @@ class TradingManager:
             'retcode': result.retcode,
             'timestamp': datetime.now().isoformat()
         }
+
+    def _get_optimal_filling_mode(self, symbol_info):
+        """
+        Determine the optimal filling mode for the symbol.
+
+        Args:
+            symbol_info: MT5 symbol info object
+
+        Returns:
+            Appropriate filling mode constant
+        """
+        try:
+            filling_mode_flags = symbol_info.filling_mode
+
+            self.logger.debug(f"Symbol {symbol_info.name} filling mode flags: {filling_mode_flags}")
+
+            # Check supported filling modes in order of preference
+            # FOK (Fill or Kill) - preferred for most cases (flag value 1)
+            if filling_mode_flags & 1:
+                self.logger.debug(f"Using FOK filling mode for {symbol_info.name}")
+                return mt5.ORDER_FILLING_FOK
+
+            # IOC (Immediate or Cancel) - second preference (flag value 2)
+            elif filling_mode_flags & 2:
+                self.logger.debug(f"Using IOC filling mode for {symbol_info.name}")
+                return mt5.ORDER_FILLING_IOC
+
+            # Return - fallback option (flag value 4)
+            elif filling_mode_flags & 4:
+                self.logger.debug(f"Using RETURN filling mode for {symbol_info.name}")
+                return mt5.ORDER_FILLING_RETURN
+
+            else:
+                # If no specific mode is supported, try FOK as default
+                self.logger.warning(f"No specific filling mode found for {symbol_info.name}, using FOK as default")
+                return mt5.ORDER_FILLING_FOK
+
+        except Exception as e:
+            self.logger.error(f"Error determining filling mode for {symbol_info.name}: {e}")
+            # Fallback to FOK
+            return mt5.ORDER_FILLING_FOK
 
     def _validate_and_adjust_volume(self, volume: float, symbol_info: Dict[str, Any]) -> float:
         """
