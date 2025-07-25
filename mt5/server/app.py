@@ -50,8 +50,10 @@ def initialize_app():
         if not mt5_connector.connect():
             raise MT5Error("Failed to connect to MT5 terminal")
 
-        # Initialize trading manager
-        trading_manager = TradingManager(mt5_connector, config['trading'])
+        # Initialize trading manager (include custom_intervals from root config)
+        trading_config = config['trading'].copy()
+        trading_config['custom_intervals'] = config.get('custom_intervals', {})
+        trading_manager = TradingManager(mt5_connector, trading_config)
 
         logger.info("Application initialized successfully")
         return True

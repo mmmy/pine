@@ -39,32 +39,30 @@ trading:
   allowed_symbols: []
   
   # Trading time restrictions (通过webhook "开启时间区间" 控制)
-  trading_hours:
-    timezone: "UTC"        # Default timezone for trading hours
 
-    # 自定义时间段配置 (通过 "开启时间区间" 控制)
-    # 默认关闭，只能通过webhook命令开启/关闭
-    custom_intervals:
-      interval1:
-        name: "自定义时段1"
-        start_time: "08:00"
-        end_time: "16:00"
-        timezone: "Europe/London"
-        description: "欧洲交易时段"
+# 自定义时间段配置 (通过 "开启时间区间" 控制)
+# 默认关闭，只能通过webhook命令开启/关闭
+custom_intervals:
+  interval1:
+    name: "自定义时段1"
+    start_time: "08:00"
+    end_time: "16:00"
+    timezone: "Europe/London"
+    description: "欧洲交易时段"
 
-      interval2:
-        name: "自定义时段2"
-        start_time: "14:00"
-        end_time: "22:00"
-        timezone: "America/New_York"
-        description: "美洲交易时段"
+  interval2:
+    name: "自定义时段2"
+    start_time: "14:00"
+    end_time: "22:00"
+    timezone: "America/New_York"
+    description: "美洲交易时段"
 
-      interval3:
-        name: "自定义时段3"
-        start_time: "01:00"
-        end_time: "09:00"
-        timezone: "Asia/Tokyo"
-        description: "亚洲交易时段"
+  interval3:
+    name: "自定义时段3"
+    start_time: "01:00"
+    end_time: "09:00"
+    timezone: "Asia/Tokyo"
+    description: "亚洲交易时段"
 
 
 

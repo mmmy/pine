@@ -24,9 +24,8 @@ class TradingHoursManager:
         self.logger = logging.getLogger('mt5_server.trading_hours')
 
         # Trading hours configuration
-        self.trading_hours_config = config.get('trading_hours', {})
-        self.default_timezone = self.trading_hours_config.get('timezone', 'UTC')
-        self.custom_intervals = self.trading_hours_config.get('custom_intervals', {})
+        self.default_timezone = 'UTC'
+        self.custom_intervals = config.get('custom_intervals', {})
 
         # Trading hours state (只能通过"开启时间区间"控制)
         self.enabled = False
