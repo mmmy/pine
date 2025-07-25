@@ -1,44 +1,63 @@
-// DOM警报监听测试脚本
-// 在TradingView页面控制台中运行此脚本来测试DOM监听功能
+// 弹窗警报监听测试脚本
+// 在TradingView页面控制台中运行此脚本来测试弹窗监听功能
 
-console.log('🧪 DOM警报监听测试开始');
+console.log('🧪 弹窗警报监听测试开始');
 
-// 创建测试警报元素
-function createTestAlert(message, type = 'info') {
-  console.log(`🔧 创建测试警报: ${message}`);
-  
+// 创建测试弹窗警报元素
+function createTestPopupAlert(message, type = 'info') {
+  console.log(`🔧 创建测试弹窗警报: ${message}`);
+
   const alertDiv = document.createElement('div');
-  alertDiv.className = `test-alert alert notification ${type}`;
+  alertDiv.className = `test-popup-alert tv-dialog popup-dialog alert-dialog ${type}`;
+  alertDiv.setAttribute('role', 'dialog');
+  alertDiv.setAttribute('data-name', 'alert-popup');
   alertDiv.style.cssText = `
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #f44336;
-    color: white;
-    padding: 15px;
-    border-radius: 5px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    color: #333;
+    padding: 20px;
+    border-radius: 8px;
     z-index: 10000;
-    max-width: 300px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    max-width: 400px;
+    min-width: 300px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    border: 1px solid #ddd;
   `;
-  
-  alertDiv.textContent = message;
+
+  alertDiv.innerHTML = `
+    <div class="alert-header" style="margin-bottom: 15px; font-weight: bold; color: #f44336;">
+      🚨 TradingView Alert
+    </div>
+    <div class="alert-content" style="margin-bottom: 15px;">
+      ${message}
+    </div>
+    <div class="alert-footer">
+      <button onclick="this.parentElement.parentElement.remove()"
+              style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+        Close
+      </button>
+    </div>
+  `;
+
   document.body.appendChild(alertDiv);
-  
-  // 3秒后自动移除
+
+  // 5秒后自动移除
   setTimeout(() => {
     if (alertDiv.parentNode) {
       alertDiv.parentNode.removeChild(alertDiv);
     }
-  }, 3000);
-  
+  }, 5000);
+
   return alertDiv;
 }
 
-// 测试不同类型的警报
-function testDifferentAlerts() {
-  console.log('🎯 测试不同类型的警报...');
-  
+// 测试不同类型的弹窗警报
+function testDifferentPopupAlerts() {
+  console.log('🎯 测试不同类型的弹窗警报...');
+
   const testAlerts = [
     'Alert: BTCUSD price reached 50000',
     '警报: ETHUSD 突破 3000 价格',
@@ -47,11 +66,11 @@ function testDifferentAlerts() {
     'Price alert: AAPL crossed above 150.00',
     'Notification: Stop loss triggered at 45000'
   ];
-  
+
   testAlerts.forEach((message, index) => {
     setTimeout(() => {
-      createTestAlert(message, index % 2 === 0 ? 'buy' : 'sell');
-    }, index * 2000);
+      createTestPopupAlert(message, index % 2 === 0 ? 'buy' : 'sell');
+    }, index * 3000); // 增加间隔时间，便于观察
   });
 }
 
@@ -214,39 +233,78 @@ function testKeywordDetection() {
 }
 
 // 主测试函数
-function runDOMMonitorTest() {
-  console.log('🚀 开始DOM监听测试...\n');
-  
+function runPopupMonitorTest() {
+  console.log('🚀 开始弹窗监听测试...\n');
+
   console.log('📋 测试计划:');
-  console.log('1. 创建不同类型的测试警报');
+  console.log('1. 创建不同类型的弹窗警报');
   console.log('2. 测试动态内容变化');
-  console.log('3. 测试现有元素扫描');
-  console.log('4. 创建TradingView样式警报');
+  console.log('3. 创建TradingView样式弹窗');
+  console.log('4. 测试显示/隐藏状态变化');
   console.log('5. 测试关键词检测');
-  
+
   // 按顺序执行测试
-  setTimeout(testDifferentAlerts, 1000);
-  setTimeout(testDynamicContent, 8000);
-  setTimeout(testExistingElementScan, 12000);
-  setTimeout(createTradingViewStyleAlert, 16000);
-  setTimeout(testKeywordDetection, 20000);
-  
-  console.log('\n✅ 测试已开始，请观察控制台输出和页面上的测试警报');
-  console.log('💡 如果DOM监听工作正常，你应该看到警报检测的日志');
+  setTimeout(testDifferentPopupAlerts, 1000);
+  setTimeout(testDynamicContent, 10000);
+  setTimeout(createTradingViewStyleAlert, 18000);
+  setTimeout(testVisibilityToggle, 25000);
+  setTimeout(testKeywordDetection, 30000);
+
+  console.log('\n✅ 测试已开始，请观察控制台输出和页面上的弹窗警报');
+  console.log('💡 如果弹窗监听工作正常，你应该看到新弹窗检测的日志');
+  console.log('🎯 注意：只有新出现的弹窗才会被检测，已存在的元素会被忽略');
+}
+
+// 测试显示/隐藏状态变化
+function testVisibilityToggle() {
+  console.log('👁️ 测试显示/隐藏状态变化...');
+
+  // 创建一个隐藏的弹窗
+  const hiddenAlert = document.createElement('div');
+  hiddenAlert.className = 'tv-dialog alert-dialog hidden-popup';
+  hiddenAlert.setAttribute('role', 'dialog');
+  hiddenAlert.setAttribute('data-name', 'alert-popup');
+  hiddenAlert.style.cssText = `
+    position: fixed;
+    top: 30%;
+    left: 30%;
+    background: #ff9800;
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    z-index: 10000;
+    display: none;
+  `;
+  hiddenAlert.textContent = 'Hidden Alert: GBPUSD breakout detected';
+
+  document.body.appendChild(hiddenAlert);
+
+  // 2秒后显示
+  setTimeout(() => {
+    console.log('🔄 显示隐藏的弹窗...');
+    hiddenAlert.style.display = 'block';
+  }, 2000);
+
+  // 5秒后移除
+  setTimeout(() => {
+    if (hiddenAlert.parentNode) {
+      hiddenAlert.parentNode.removeChild(hiddenAlert);
+    }
+  }, 7000);
 }
 
 // 暴露测试函数
-window.domMonitorTest = {
-  run: runDOMMonitorTest,
-  createAlert: createTestAlert,
+window.popupMonitorTest = {
+  run: runPopupMonitorTest,
+  createPopup: createTestPopupAlert,
   testDynamic: testDynamicContent,
-  testExisting: testExistingElementScan,
   testTVStyle: createTradingViewStyleAlert,
-  testKeywords: testKeywordDetection
+  testKeywords: testKeywordDetection,
+  testVisibility: testVisibilityToggle
 };
 
 // 自动运行测试
-runDOMMonitorTest();
+runPopupMonitorTest();
 
-console.log('\n🔧 测试函数已暴露到 window.domMonitorTest');
-console.log('可以单独运行: window.domMonitorTest.createAlert("Test Alert")');
+console.log('\n🔧 测试函数已暴露到 window.popupMonitorTest');
+console.log('可以单独运行: window.popupMonitorTest.createPopup("Test Popup Alert")');
