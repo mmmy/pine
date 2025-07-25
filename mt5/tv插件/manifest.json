@@ -10,7 +10,8 @@
   ],
   "host_permissions": [
     "https://*.tradingview.com/*",
-    "https://www.tradingview.com/*"
+    "https://www.tradingview.com/*",
+    "https://cn.tradingview.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -19,7 +20,18 @@
     {
       "matches": [
         "https://*.tradingview.com/*",
-        "https://www.tradingview.com/*"
+        "https://www.tradingview.com/*",
+        "https://cn.tradingview.com/*"
+      ],
+      "js": ["websocket-injector.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.tradingview.com/*",
+        "https://www.tradingview.com/*",
+        "https://cn.tradingview.com/*"
       ],
       "js": ["dom-alert-monitor.js"],
       "run_at": "document_end"

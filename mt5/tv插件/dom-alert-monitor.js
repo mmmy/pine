@@ -395,23 +395,53 @@
     }
   });
 
+  // 监听来自websocket-injector的警报事件
+  function setupAlertEventListener() {
+    document.addEventListener('tradingview-alert', (event) => {
+      console.log('📨 收到来自injector的警报事件:', event.detail);
+
+      const alertData = event.detail.data;
+      alertCount++;
+
+      console.log(`🚨 警报 #${alertCount} 处理中:`, alertData.message);
+
+      // 检查插件是否启用
+      checkEnabled((enabled) => {
+        if (!enabled) {
+          console.log('⚠️ 插件已禁用，跳过警报处理');
+          return;
+        }
+
+        // 发送到background script
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+          chrome.runtime.sendMessage(event.detail, (response) => {
+            if (response && response.success) {
+              console.log('✅ 警报已发送到background script');
+            } else {
+              console.log('❌ 发送警报失败', response);
+            }
+          });
+        }
+      });
+    });
+
+    console.log('✅ 警报事件监听器已安装');
+  }
+
   // 页面卸载时清理
   window.addEventListener('beforeunload', cleanup);
 
-  // 立即启动 - 在脚本加载时就安装WebSocket拦截器
+  // 立即启动
   console.log('🚀 TradingView WebSocket警报监听器开始加载...');
 
-  // 立即安装WebSocket拦截器，确保不错过任何连接
-  if (document.readyState === 'loading') {
-    // 如果页面还在加载，立即安装
-    initialize();
-  } else {
-    // 如果页面已加载，也立即安装
-    initialize();
-  }
+  // 设置警报事件监听器
+  setupAlertEventListener();
+
+  // 初始化其他功能
+  initialize();
 
   console.log('✅ TradingView WebSocket警报监听器已加载');
-  console.log('🎯 通过拦截WebSocket消息获取实时警报数据');
+  console.log('🎯 通过WebSocket注入器获取实时警报数据');
   console.log('🔧 使用 window.tvAlertForwarder 访问调试接口');
-  console.log('🔍 使用 window.tvAlertForwarder.showAllConnections() 查看所有WebSocket连接');
+  console.log('🔍 使用 window.wsInjectorDebug.showStats() 查看WebSocket统计');
 })();
