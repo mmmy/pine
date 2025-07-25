@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, time
 import pytz
+from trading_hours_manager import TradingHoursManager
 from utils.exceptions import TradingError, ValidationError, ConnectionError
 from utils.validators import validate_trade_parameters, sanitize_comment
 from utils.logger import log_trade_operation, log_error_with_context
@@ -27,6 +28,9 @@ class TradingManager:
         self.mt5_connector = mt5_connector
         self.config = config
         self.logger = logging.getLogger('mt5_server.trading')
+
+        # Trading hours manager
+        self.trading_hours_manager = TradingHoursManager(config)
         
     def execute_webhook_trade(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -40,11 +44,18 @@ class TradingManager:
         """
         try:
             action = payload['action'].lower()
+
+            # Handle trading hours commands first (they don't need symbol)
+            if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+                return self.trading_hours_manager.handle_trading_hours_command(action, payload)
+
+            # For regular trading commands, get symbol and check trading hours
             symbol = payload['symbol'].upper()
-            
-            # Check if trading is allowed at current time
-            if not self._is_trading_time_allowed():
-                raise TradingError("Trading not allowed at current time")
+
+            # Check if trading is allowed at current time for regular trading actions
+            if action in ['buy', 'sell', 'close', 'close_all', 'modify']:
+                if not self.trading_hours_manager.is_trading_allowed():
+                    raise TradingError("Trading not allowed at current time due to trading hours restrictions")
             
             # Route to appropriate handler
             if action in ['buy', 'sell']:
@@ -398,40 +409,14 @@ class TradingManager:
 
         return volume
 
-    def _is_trading_time_allowed(self) -> bool:
+    def get_trading_hours_status(self) -> Dict[str, Any]:
         """
-        Check if current time is within allowed trading hours.
+        Get trading hours status.
 
         Returns:
-            True if trading is allowed, False otherwise
+            Trading hours status dictionary
         """
-        trading_hours = self.config.get('trading_hours', {})
-        if not trading_hours.get('enabled', False):
-            return True
-
-        try:
-            # Get current time in specified timezone
-            timezone_str = trading_hours.get('timezone', 'UTC')
-            tz = pytz.timezone(timezone_str)
-            current_time = datetime.now(tz).time()
-
-            # Parse start and end times
-            start_time_str = trading_hours.get('start_time', '00:00')
-            end_time_str = trading_hours.get('end_time', '23:59')
-
-            start_time = time.fromisoformat(start_time_str)
-            end_time = time.fromisoformat(end_time_str)
-
-            # Check if current time is within trading hours
-            if start_time <= end_time:
-                return start_time <= current_time <= end_time
-            else:
-                # Handle overnight trading (e.g., 22:00 to 06:00)
-                return current_time >= start_time or current_time <= end_time
-
-        except Exception as e:
-            log_error_with_context(self.logger, e, "Error checking trading time")
-            return True  # Default to allow trading if time check fails
+        return self.trading_hours_manager.get_status()
 
     def get_positions(self) -> List[Dict[str, Any]]:
         """

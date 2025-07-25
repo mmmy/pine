@@ -23,7 +23,10 @@ class ChineseMessageParser:
         '平空': 'close_short',
         '平仓': 'close',
         '全平': 'close_all',
-        '修改': 'modify'
+        '修改': 'modify',
+        '开启时间区间': 'enable_trading_hours',
+        '关闭时间区间': 'disable_trading_hours',
+        '设置时间区间': 'set_trading_hours'
     }
     
     # 参数映射
@@ -49,7 +52,13 @@ class ChineseMessageParser:
         '票号': 'ticket',
         '持仓号': 'ticket',
         '滑点': 'deviation',
-        '最大滑点': 'deviation'
+        '最大滑点': 'deviation',
+        # 时间区间相关参数
+        '开始时间': 'start_time',
+        '结束时间': 'end_time',
+        '时区': 'timezone',
+        '时间区间': 'intervals',
+        '区间': 'intervals'
         # 移除账户相关参数，现在只使用当前登录的MT5账户
     }
     
@@ -90,26 +99,37 @@ class ChineseMessageParser:
         
         # 分割消息为词组
         parts = self._split_message(message)
-        if len(parts) < 2:
-            raise ValidationError("消息格式错误，至少需要操作方向和交易品种")
-        
+        if len(parts) < 1:
+            raise ValidationError("消息格式错误，至少需要操作方向")
+
         # 解析操作方向
         action_text = parts[0]
         action = self._parse_action(action_text)
-        
-        # 解析交易品种
-        symbol = parts[1].upper()
-        if not self._is_valid_symbol(symbol):
-            raise ValidationError(f"无效的交易品种: {symbol}")
-        
+
         # 构建基础参数
         params = {
-            'action': action,
-            'symbol': symbol
+            'action': action
         }
+
+        # 时间区间控制命令不需要交易品种
+        if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+            # 时间区间控制命令，从第1个参数开始解析
+            start_index = 1
+        else:
+            # 普通交易命令，需要交易品种
+            if len(parts) < 2:
+                raise ValidationError(f"缺少交易品种 (action={action}, parts={len(parts)})")
+
+            # 解析交易品种
+            symbol = parts[1].upper()
+            if not self._is_valid_symbol(symbol):
+                raise ValidationError(f"无效的交易品种: {symbol}")
+
+            params['symbol'] = symbol
+            start_index = 2
         
         # 解析其他参数
-        for i in range(2, len(parts)):
+        for i in range(start_index, len(parts)):
             part = parts[i]
             self._parse_parameter(part, params)
         
@@ -117,10 +137,37 @@ class ChineseMessageParser:
     
     def _split_message(self, message: str) -> List[str]:
         """Split message into parts."""
-        # 使用空格分割，但保持等号连接的部分
+        # 先检查是否以多词操作开头
+        multi_word_actions = ['开启时间区间', '关闭时间区间', '设置时间区间']
+
+        for action in multi_word_actions:
+            if message.startswith(action):
+                # 找到多词操作，分割剩余部分
+                remaining = message[len(action):].strip()
+                if remaining:
+                    # 分割剩余参数
+                    remaining_parts = []
+                    current_part = ""
+
+                    for char in remaining:
+                        if char == ' ':
+                            if current_part:
+                                remaining_parts.append(current_part)
+                                current_part = ""
+                        else:
+                            current_part += char
+
+                    if current_part:
+                        remaining_parts.append(current_part)
+
+                    return [action] + remaining_parts
+                else:
+                    return [action]
+
+        # 普通分割逻辑
         parts = []
         current_part = ""
-        
+
         for char in message:
             if char == ' ':
                 if current_part:
@@ -128,10 +175,10 @@ class ChineseMessageParser:
                     current_part = ""
             else:
                 current_part += char
-        
+
         if current_part:
             parts.append(current_part)
-        
+
         return parts
     
     def _parse_action(self, action_text: str) -> str:
@@ -207,12 +254,14 @@ class ChineseMessageParser:
         """Validate parsed parameters."""
         action = params.get('action')
         symbol = params.get('symbol')
-        
+
         if not action:
             raise ValidationError("缺少操作方向")
-        
-        if not symbol:
-            raise ValidationError("缺少交易品种")
+
+        # 时间区间控制命令不需要交易品种
+        if action not in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+            if not symbol:
+                raise ValidationError("缺少交易品种")
         
         # 根据操作类型验证必需参数
         if action in ['buy', 'sell']:
@@ -247,9 +296,21 @@ class ChineseMessageParser:
         
         # 复制其他标准参数
         standard_fields = ['symbol', 'volume', 'sl', 'tp', 'price', 'comment', 'magic', 'ticket']
-        for field in standard_fields:
-            if field in params:
-                standard_params[field] = params[field]
+
+        # 时间区间相关参数
+        time_fields = ['start_time', 'end_time', 'timezone', 'intervals']
+
+        # 根据操作类型选择要复制的字段
+        if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+            # 时间区间命令，复制时间相关字段
+            for field in time_fields:
+                if field in params:
+                    standard_params[field] = params[field]
+        else:
+            # 普通交易命令，复制标准字段
+            for field in standard_fields:
+                if field in params:
+                    standard_params[field] = params[field]
         
         # 处理开关参数
         if params.get('allow_slippage'):

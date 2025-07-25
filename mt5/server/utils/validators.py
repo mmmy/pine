@@ -95,8 +95,14 @@ def validate_webhook_payload(payload: Dict[str, Any], webhook_config: Dict[str, 
     result = {'valid': True, 'message': ''}
     
     try:
-        # Check required fields
+        # Check required fields based on action type
+        action = payload.get('action', '').lower()
         required_fields = webhook_config.get('required_fields', [])
+
+        # Time interval commands don't require symbol
+        if action in ['enable_trading_hours', 'disable_trading_hours', 'set_trading_hours']:
+            required_fields = [field for field in required_fields if field != 'symbol']
+
         for field in required_fields:
             if field not in payload:
                 result['valid'] = False
@@ -106,7 +112,10 @@ def validate_webhook_payload(payload: Dict[str, Any], webhook_config: Dict[str, 
         # Validate action field
         if 'action' in payload:
             action = payload['action'].lower()
-            valid_actions = ['buy', 'sell', 'close', 'close_all', 'modify']
+            valid_actions = [
+                'buy', 'sell', 'close', 'close_all', 'modify',
+                'enable_trading_hours', 'disable_trading_hours', 'set_trading_hours'
+            ]
             if action not in valid_actions:
                 result['valid'] = False
                 result['message'] = f"Invalid action: {action}. Must be one of {valid_actions}"

@@ -75,10 +75,16 @@ def health_check():
         if mt5_connector and mt5_status:
             account_info = mt5_connector.get_account_info()
 
+        # Get trading hours status
+        trading_hours_status = None
+        if trading_manager:
+            trading_hours_status = trading_manager.get_trading_hours_status()
+
         return jsonify({
             'status': 'healthy' if mt5_status else 'unhealthy',
             'mt5_connected': mt5_status,
             'account_info': account_info,
+            'trading_hours': trading_hours_status,
             'timestamp': trading_manager.get_server_time() if trading_manager else None
         })
     except Exception as e:
@@ -97,10 +103,16 @@ def get_status():
         # Get account info
         account_info = trading_manager.get_account_info() if trading_manager else None
 
+        # Get trading hours status
+        trading_hours_status = None
+        if trading_manager:
+            trading_hours_status = trading_manager.get_trading_hours_status()
+
         return jsonify({
             'server_status': 'running',
             'mt5_connected': mt5_connector.is_connected() if mt5_connector else False,
             'account_info': account_info,
+            'trading_hours': trading_hours_status,
             'timestamp': trading_manager.get_server_time() if trading_manager else None
         })
     except Exception as e:

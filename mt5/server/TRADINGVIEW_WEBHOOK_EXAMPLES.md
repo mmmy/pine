@@ -196,6 +196,73 @@ http://你的服务器IP:5000/webhook
 }
 ```
 
+### 5. 时间区间控制
+
+#### 中文格式开启预定义时间区间
+```
+开启时间区间 时间区间=europe,america
+开启时间区间 时间区间=asia
+开启时间区间 时间区间=custom1,custom2
+```
+
+#### 中文格式开启自定义时间区间
+```
+开启时间区间 开始时间=09:00 结束时间=17:00 时区=UTC
+设置时间区间 开始时间=22:00 结束时间=06:00 时区=Asia/Shanghai
+```
+
+#### 中文格式关闭时间区间
+```
+关闭时间区间
+关闭时间区间 时间区间=europe
+关闭时间区间 时间区间=america,asia
+```
+
+#### 查看可用时间区间
+```
+开启时间区间
+```
+
+#### JSON格式开启预定义时间区间
+```json
+{
+  "action": "enable_trading_hours",
+  "intervals": "europe,america"
+}
+```
+
+#### JSON格式开启自定义时间区间
+```json
+{
+  "action": "enable_trading_hours",
+  "start_time": "09:00",
+  "end_time": "17:00",
+  "timezone": "UTC"
+}
+```
+
+#### JSON格式关闭时间区间
+```json
+{
+  "action": "disable_trading_hours"
+}
+```
+
+#### JSON格式关闭特定时间区间
+```json
+{
+  "action": "disable_trading_hours",
+  "intervals": "europe,america"
+}
+```
+
+#### 预定义时间区间说明
+- **europe**: 欧洲时段 (08:00-16:00 London)
+- **america**: 美洲时段 (14:00-22:00 New York)
+- **asia**: 亚洲时段 (01:00-09:00 Tokyo)
+- **custom1**: 自定义时段1 (09:00-17:00 UTC)
+- **custom2**: 自定义时段2 (22:00-06:00 Shanghai)
+
 ## 高级配置示例
 
 ### 1. 条件交易

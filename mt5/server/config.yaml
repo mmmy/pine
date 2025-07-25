@@ -38,12 +38,51 @@ trading:
   # Allowed symbols (empty = allow all)
   allowed_symbols: []
   
-  # Trading time restrictions
+  # Trading time restrictions (通过webhook "开启时间区间" 控制)
   trading_hours:
-    enabled: false
-    start_time: "09:00"    # Trading start time (24h format)
-    end_time: "17:00"      # Trading end time (24h format)
-    timezone: "UTC"        # Timezone for trading hours
+    timezone: "UTC"        # Default timezone for trading hours
+
+    # 预定义的时间区间配置
+    intervals:
+      # 欧洲时段
+      europe:
+        name: "欧洲时段"
+        start_time: "08:00"
+        end_time: "16:00"
+        timezone: "Europe/London"
+        description: "伦敦交易时段"
+
+      # 美洲时段
+      america:
+        name: "美洲时段"
+        start_time: "14:00"
+        end_time: "22:00"
+        timezone: "America/New_York"
+        description: "纽约交易时段"
+
+      # 亚洲时段
+      asia:
+        name: "亚洲时段"
+        start_time: "01:00"
+        end_time: "09:00"
+        timezone: "Asia/Tokyo"
+        description: "东京交易时段"
+
+      # 自定义时段1
+      custom1:
+        name: "自定义时段1"
+        start_time: "09:00"
+        end_time: "17:00"
+        timezone: "UTC"
+        description: "标准工作时间"
+
+      # 自定义时段2
+      custom2:
+        name: "自定义时段2"
+        start_time: "22:00"
+        end_time: "06:00"
+        timezone: "Asia/Shanghai"
+        description: "夜间交易时段"
 
 # Logging Settings
 logging:
