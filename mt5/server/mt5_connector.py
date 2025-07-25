@@ -8,8 +8,48 @@ import logging
 from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
 import pandas as pd
+from functools import wraps
 from utils.exceptions import MT5Error, ConnectionError
 from utils.logger import log_mt5_connection, log_error_with_context
+
+
+def auto_reconnect(func):
+    """
+    Decorator to automatically reconnect to MT5 if connection is lost.
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            # Check connection before attempting operation
+            if not self.is_connected():
+                self.logger.warning(f"MT5 not connected before {func.__name__}, attempting to reconnect...")
+                if not self.connect():
+                    raise ConnectionError(f"MT5 connection failed before {func.__name__}")
+
+            # First attempt
+            return func(self, *args, **kwargs)
+        except Exception as e:
+            # Check if it's a connection-related error
+            error_str = str(e).lower()
+            if (not self.is_connected() or
+                "not connected" in error_str or
+                "connection" in error_str or
+                isinstance(e, ConnectionError)):
+
+                self.logger.warning(f"MT5 connection lost during {func.__name__}, attempting to reconnect...")
+
+                # Attempt to reconnect
+                if self.connect():
+                    self.logger.info(f"MT5 reconnection successful, retrying {func.__name__}")
+                    # Retry the operation after successful reconnection
+                    return func(self, *args, **kwargs)
+                else:
+                    self.logger.error(f"MT5 reconnection failed for {func.__name__}")
+                    raise ConnectionError(f"MT5 reconnection failed during {func.__name__}: {e}")
+            else:
+                # Not a connection error, re-raise original exception
+                raise
+    return wrapper
 
 
 class MT5Connector:
@@ -95,6 +135,7 @@ class MT5Connector:
             self.connected = False
             return False
     
+    @auto_reconnect
     def get_account_info(self) -> Optional[Dict[str, Any]]:
         """
         Get account information.
@@ -131,6 +172,7 @@ class MT5Connector:
             log_error_with_context(self.logger, e, "Failed to get account info")
             return None
     
+    @auto_reconnect
     def get_symbol_info(self, symbol: str) -> Optional[Dict[str, Any]]:
         """
         Get symbol information.
@@ -171,6 +213,7 @@ class MT5Connector:
             log_error_with_context(self.logger, e, f"Failed to get symbol info for {symbol}")
             return None
     
+    @auto_reconnect
     def get_positions(self, symbol: str = None) -> List[Dict[str, Any]]:
         """
         Get open positions.
@@ -219,6 +262,7 @@ class MT5Connector:
             log_error_with_context(self.logger, e, "Failed to get positions")
             return []
     
+    @auto_reconnect
     def get_orders(self, symbol: str = None) -> List[Dict[str, Any]]:
         """
         Get pending orders.
@@ -264,6 +308,7 @@ class MT5Connector:
             log_error_with_context(self.logger, e, "Failed to get orders")
             return []
     
+    @auto_reconnect
     def get_server_time(self) -> Optional[datetime]:
         """
         Get MT5 server time.
@@ -288,6 +333,7 @@ class MT5Connector:
             log_error_with_context(self.logger, e, "Failed to get server time")
             return None
     
+    @auto_reconnect
     def check_symbol_availability(self, symbol: str) -> bool:
         """
         Check if symbol is available for trading.

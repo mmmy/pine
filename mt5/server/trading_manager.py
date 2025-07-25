@@ -8,10 +8,50 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, time
 import pytz
+from functools import wraps
 from trading_hours_manager import TradingHoursManager
 from utils.exceptions import TradingError, ValidationError, ConnectionError
 from utils.validators import validate_trade_parameters, sanitize_comment
 from utils.logger import log_trade_operation, log_error_with_context
+
+
+def auto_reconnect_trading(func):
+    """
+    Decorator to automatically reconnect to MT5 if connection is lost during trading operations.
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        try:
+            # Check connection before attempting operation
+            if not self.mt5_connector.is_connected():
+                self.logger.warning(f"MT5 not connected before {func.__name__}, attempting to reconnect...")
+                if not self.mt5_connector.connect():
+                    raise ConnectionError(f"MT5 connection failed before {func.__name__}")
+
+            # First attempt
+            return func(self, *args, **kwargs)
+        except Exception as e:
+            # Check if it's a connection-related error
+            error_str = str(e).lower()
+            if (not self.mt5_connector.is_connected() or
+                "not connected" in error_str or
+                "connection" in error_str or
+                isinstance(e, ConnectionError)):
+
+                self.logger.warning(f"MT5 connection lost during {func.__name__}, attempting to reconnect...")
+
+                # Attempt to reconnect
+                if self.mt5_connector.connect():
+                    self.logger.info(f"MT5 reconnection successful, retrying {func.__name__}")
+                    # Retry the operation after successful reconnection
+                    return func(self, *args, **kwargs)
+                else:
+                    self.logger.error(f"MT5 reconnection failed for {func.__name__}")
+                    raise ConnectionError(f"MT5 reconnection failed during {func.__name__}: {e}")
+            else:
+                # Not a connection error, re-raise original exception
+                raise
+    return wrapper
 
 
 class TradingManager:
@@ -85,6 +125,7 @@ class TradingManager:
         """
         return self.execute_webhook_trade(payload)
     
+    @auto_reconnect_trading
     def _execute_market_order(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute market buy/sell order.
@@ -192,6 +233,7 @@ class TradingManager:
             'timestamp': datetime.now().isoformat()
         }
     
+    @auto_reconnect_trading
     def _close_position(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Close specific position.
@@ -288,6 +330,7 @@ class TradingManager:
         
         return {'closed_positions': results}
     
+    @auto_reconnect_trading
     def _close_all_positions(self, symbol: str = None) -> Dict[str, Any]:
         """
         Close all positions for symbol or all symbols.
@@ -323,6 +366,7 @@ class TradingManager:
         
         return {'closed_positions': results}
     
+    @auto_reconnect_trading
     def _modify_position(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Modify position stop loss and take profit.
