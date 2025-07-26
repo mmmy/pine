@@ -1,0 +1,168 @@
+# MT5 Trading HTTP Server - 生产环境配置
+# 腾讯云Windows服务器专用配置
+
+# Trading Settings
+trading:
+  # Default trading parameters
+  default_volume: 0.1      # 默认交易量
+  max_volume: 10.0         # 最大交易量限制
+  min_volume: 0.01         # 最小交易量限制
+  
+  # Risk management
+  max_slippage: 3          # 最大滑点（点数）
+  magic_number: 12345      # 魔术数字
+  
+  # Allowed symbols (empty = allow all)
+  allowed_symbols: []      # 允许交易的品种（空=允许所有）
+  
+  # Trading hours (24/7 by default)
+  trading_hours:
+    enabled: false         # 是否启用交易时间限制
+    timezone: "Asia/Shanghai"
+    sessions:
+      - start: "09:00"
+        end: "17:00"
+        days: [1, 2, 3, 4, 5]  # Monday to Friday
+
+# Custom time intervals for Chinese parsing
+custom_intervals:
+  # 中文时间间隔映射
+  "1分钟": "1m"
+  "5分钟": "5m"
+  "15分钟": "15m"
+  "30分钟": "30m"
+  "1小时": "1h"
+  "4小时": "4h"
+  "1天": "1d"
+  "1周": "1w"
+
+# MT5 Connection Settings
+mt5:
+  # MT5 terminal path (optional, auto-detect if not specified)
+  terminal_path: ""
+  
+  # MT5 connection settings (使用当前已登录的MT5客户端)
+  # 不需要账户配置，直接使用MT5客户端当前登录的账户
+  
+  # Connection timeout settings
+  timeout:
+    connect: 30  # 连接超时（秒）
+    trade: 10    # 交易操作超时（秒）
+
+# HTTP Server Settings
+server:
+  host: "127.0.0.1"  # 服务器地址（仅本地访问，通过nginx代理）
+  port: 5000         # 服务器端口
+  debug: false       # 调试模式（生产环境必须为false）
+  
+  # API Security
+  security:
+    api_key: "mt5_trading_api_key_2024_secure"  # API密钥（请修改为强密码）
+    allowed_ips:     # 允许访问的IP地址列表
+      - "127.0.0.1"           # 本地访问
+      - "10.0.0.0/8"          # 内网访问
+      - "172.16.0.0/12"       # 内网访问
+      - "192.168.0.0/16"      # 内网访问
+      # 添加TradingView的IP段或其他需要访问的IP
+      # - "52.89.214.238"     # TradingView IP示例
+      # - "34.212.75.30"      # TradingView IP示例
+      # - "54.218.53.128"     # TradingView IP示例
+
+# Logging Settings
+logging:
+  level: "INFO"              # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "mt5_server.log"     # 日志文件名
+  max_size: 10485760         # 最大文件大小（10MB）
+  backup_count: 5            # 备份文件数量
+  console: true              # 是否输出到控制台
+  
+  # 日志格式
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  date_format: "%Y-%m-%d %H:%M:%S"
+  
+  # 交易日志单独配置
+  trading_log:
+    enabled: true
+    file: "trading.log"
+    level: "INFO"
+
+# Performance Settings
+performance:
+  # 连接池设置
+  connection_pool:
+    max_connections: 10
+    timeout: 30
+  
+  # 缓存设置
+  cache:
+    enabled: true
+    ttl: 300  # 缓存生存时间（秒）
+  
+  # 请求限制
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst_size: 10
+
+# Monitoring Settings
+monitoring:
+  # 健康检查
+  health_check:
+    enabled: true
+    interval: 30  # 检查间隔（秒）
+  
+  # 性能监控
+  metrics:
+    enabled: true
+    collection_interval: 60  # 收集间隔（秒）
+  
+  # 告警设置
+  alerts:
+    enabled: false
+    email: ""
+    webhook_url: ""
+
+# Backup Settings
+backup:
+  enabled: true
+  interval: 3600  # 备份间隔（秒）
+  retention_days: 7
+  backup_dir: "backup"
+
+# Security Settings
+security:
+  # CORS设置
+  cors:
+    enabled: true
+    origins: ["*"]  # 生产环境建议限制具体域名
+  
+  # 请求验证
+  validation:
+    strict_mode: true
+    max_request_size: 1048576  # 1MB
+  
+  # SSL/TLS (如果使用HTTPS)
+  ssl:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+
+# Error Handling
+error_handling:
+  # 错误重试
+  retry:
+    enabled: true
+    max_attempts: 3
+    delay: 1  # 重试延迟（秒）
+  
+  # 错误通知
+  notifications:
+    enabled: false
+    webhook_url: ""
+    email: ""
+
+# Development Settings (生产环境应禁用)
+development:
+  auto_reload: false
+  debug_toolbar: false
+  profiling: false
