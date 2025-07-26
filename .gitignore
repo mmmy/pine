@@ -16,6 +16,13 @@ scheduled_trading_strategy_final.pine
 # Log files
 *.log
 
+# MT5 Server configuration and sensitive files
+mt5/server/config.yaml
+mt5/server/.env
+mt5/server/logs/
+mt5/server/backup/
+mt5/server/*.log
+
 # Windows specific
 Thumbs.db
 Desktop.ini
