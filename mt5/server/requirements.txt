@@ -23,3 +23,6 @@ pytz
 
 # JSON schema validation
 jsonschema
+
+# Production WSGI server
+waitress

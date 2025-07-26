@@ -90,8 +90,15 @@ if %errorLevel% equ 0 (
 echo.
 echo Installing MT5 Server service...
 
-REM 安装服务
-nssm.exe install "%SERVICE_NAME%" "%PYTHON_EXE%" "%SCRIPT_PATH%"
+REM 安装服务（使用生产模式启动脚本）
+set "PRODUCTION_SCRIPT=%INSTALL_DIR%\start_production.py"
+if exist "%PRODUCTION_SCRIPT%" (
+    echo Using production startup script...
+    nssm.exe install "%SERVICE_NAME%" "%PYTHON_EXE%" "%PRODUCTION_SCRIPT%"
+) else (
+    echo Using development startup script...
+    nssm.exe install "%SERVICE_NAME%" "%PYTHON_EXE%" "%SCRIPT_PATH%"
+)
 if %errorLevel% neq 0 (
     echo Error: Failed to install service.
     pause
