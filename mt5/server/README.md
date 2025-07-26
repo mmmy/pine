@@ -127,14 +127,64 @@ GET /status
   "server_status": "running",
   "mt5_connected": true,
   "account_info": {
-    "login": 12345,
-    "balance": 10000.0,
-    "equity": 10000.0,
-    "currency": "USD"
+    "login": 67424067,
+    "balance": 99594.28,
+    "equity": 99623.28,
+    "currency": "USD",
+    "name": "Yqtest3 Yq3",
+    "server": "ForexTimeFXTM-Demo02",
+    "trade_allowed": true
   },
-  "timestamp": "2025-01-15T10:30:00"
+  "trading_hours": {
+    "enabled": false,
+    "trading_allowed": true,
+    "default_timezone": "UTC"
+  },
+  "custom_intervals": {
+    "total_count": 4,
+    "intervals": {
+      "interval1": {
+        "name": "自定义时段1",
+        "time_range": "08:00-16:00",
+        "timezone": "Europe/London",
+        "description": "欧洲交易时段"
+      },
+      "interval2": {
+        "name": "自定义时段2",
+        "time_range": "14:00-22:00",
+        "timezone": "America/New_York",
+        "description": "美洲交易时段"
+      },
+      "interval3": {
+        "name": "自定义时段3",
+        "time_range": "01:00-09:00",
+        "timezone": "GMT+8",
+        "description": "亚洲交易时段"
+      },
+      "interval4": {
+        "name": "自定义时段4",
+        "time_range": "13:00-15:00",
+        "timezone": "GMT+8",
+        "description": "亚洲交易时段"
+      }
+    }
+  },
+  "timestamp": "2025-01-26T20:55:00"
 }
 ```
+
+**字段说明：**
+- `server_status`: 服务器运行状态
+- `mt5_connected`: MT5连接状态
+- `account_info`: MT5账户详细信息
+- `trading_hours`: 交易时间管理状态
+- `custom_intervals`: 自定义时间段配置
+  - `total_count`: 配置的时间段总数
+  - `intervals`: 各时间段详细信息
+    - `name`: 时间段名称
+    - `time_range`: 时间范围
+    - `timezone`: 时区
+    - `description`: 描述信息
 
 #### 查询持仓
 ```http
