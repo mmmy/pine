@@ -1,5 +1,4 @@
-# MT5 Trading HTTP Server Configuration Template
-# 复制此文件为 config.yaml 并修改相应配置
+# MT5 Trading HTTP Server Configuration
 
 # Trading Settings
 trading:
@@ -67,64 +66,36 @@ server:
   
   # API Security
   security:
-    api_key: ""      # API key for authentication (请设置强密码)
+    api_key: ""      # API key for authentication (leave empty to disable)
     allowed_ips: []  # List of allowed IP addresses (empty = allow all)
-    # 示例:
-    # allowed_ips:
-    #   - "192.168.1.0/24"
-    #   - "10.0.0.100"
-    #   - "127.0.0.1"
 
 # Logging Settings
 logging:
-  level: "INFO"              # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  file: "mt5_server.log"     # Log file name
-  max_size: 10485760         # Max file size in bytes (10MB)
-  backup_count: 5            # Number of backup files to keep
-  console: true              # Whether to log to console
+  level: "INFO"            # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "mt5_server.log"   # Log file path
+  max_size: 10485760       # Max log file size in bytes (10MB)
+  backup_count: 5          # Number of backup log files to keep
+  
+  # Console logging
+  console: true            # Enable console logging
   
   # Log format
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  date_format: "%Y-%m-%d %H:%M:%S"
-  
-  # Trading log configuration
-  trading_log:
-    enabled: true
-    file: "trading.log"
-    level: "INFO"
 
-# Trading Hours Configuration
-trading_hours:
-  enabled: false             # Enable trading hours restriction
-  timezone: "GMT+8"          # Timezone for trading hours
+# Webhook Settings
+webhook:
+  # TradingView webhook validation
+  validate_source: false   # Validate webhook source
   
-  # Trading sessions
-  sessions:
-    - start: "09:00"
-      end: "17:00"
-      days: [1, 2, 3, 4, 5]  # Monday to Friday (1=Monday, 7=Sunday)
-    
-    # 可以添加多个交易时段
-    # - start: "20:00"
-    #   end: "23:59"
-    #   days: [1, 2, 3, 4, 5]
-
-# Performance Settings (可选)
-performance:
-  # Connection pool settings
-  connection_pool:
-    max_connections: 10
-    timeout: 30
+  # Webhook timeout
+  timeout: 30              # Webhook processing timeout in seconds
   
-  # Cache settings
-  cache:
-    enabled: true
-    ttl: 300  # Cache TTL in seconds
-
-# Error Handling (可选)
-error_handling:
-  # Retry settings
-  retry:
-    enabled: true
-    max_attempts: 3
-    delay: 1  # Retry delay in seconds
+  # Required fields in webhook payload
+  required_fields:
+    - "action"             # buy, sell, close, etc.
+    - "symbol"             # trading symbol
+  
+  # Optional fields with defaults
+  optional_fields:
+    volume: 0.1            # default volume if not specified
+    comment: "Webhook Trade"  # default comment
