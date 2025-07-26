@@ -81,21 +81,24 @@ def update_config_from_args(args):
 
 def check_requirements():
     """Check if all required dependencies are installed."""
-    required_packages = [
-        'MetaTrader5',
-        'Flask',
-        'PyYAML',
-        'pandas',
-        'pytz'
-    ]
-    
+    # Package name mapping: pip package name -> import name
+    required_packages = {
+        'MetaTrader5': 'MetaTrader5',
+        'Flask': 'flask',
+        'PyYAML': 'yaml',
+        'pandas': 'pandas',
+        'pytz': 'pytz',
+        'python-dotenv': 'dotenv',
+        'Flask-CORS': 'flask_cors'
+    }
+
     missing_packages = []
-    for package in required_packages:
+    for pip_name, import_name in required_packages.items():
         try:
-            __import__(package)
+            __import__(import_name)
         except ImportError:
-            missing_packages.append(package)
-    
+            missing_packages.append(pip_name)
+
     if missing_packages:
         print("Error: Missing required packages:")
         for package in missing_packages:
@@ -103,7 +106,7 @@ def check_requirements():
         print("\nPlease install missing packages using:")
         print("  pip install -r requirements.txt")
         return False
-    
+
     return True
 
 
