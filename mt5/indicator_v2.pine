@@ -1,0 +1,281 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © gouge99 (Modified by Gemini)
+
+//@version=5
+indicator("MT5 Indicator (Multi-Level, Final 3, 20 Sessions)", overlay=true, max_labels_count = 500)
+
+// =============================================================================
+// 交易设置
+// =============================================================================
+tradingGroup = '交易设置'
+tradingDirection = input.string("做多", "警报方向", options=["做多", "做空"], group=tradingGroup, tooltip="此选项仅过滤警报，图表上会显示所有信号")
+minBodySize = input.float(1.0, "最小实体长度", group=tradingGroup, tooltip="适用于所有信号的最小K线实体长度")
+
+// --- 纺锤线信号设置 ---
+spinningTopGroup = "纺锤线信号设置"
+enableSpinningTopSignal = input.bool(true, "启用纺锤线信号", group=spinningTopGroup)
+positionSize_Spin = input.float(1.0, "开仓数量", minval=0.01, group=spinningTopGroup)
+enableSpinningTopPriceCheck = input.bool(false, "启用开盘价比较条件", group=spinningTopGroup, tooltip="做多：开盘价 > 白色纺锤线收盘价；做空：开盘价 < 黑色纺锤线收盘价")
+
+// --- 价格成交条件 1 ---
+level1Group = "价格成交条件 1"
+enable_L1 = input.bool(true, "启用", group = level1Group, inline = "L1")
+price_L1 = input.price(0.0, "成交价格", group = level1Group, inline = "L1", tooltip = "价格大于0才生效")
+size_L1 = input.float(1.0, "开仓数量", minval=0.01, group = level1Group, inline = "L1")
+
+// --- 价格成交条件 2 ---
+level2Group = "价格成交条件 2"
+enable_L2 = input.bool(false, "启用", group = level2Group, inline = "L2")
+price_L2 = input.price(0.0, "成交价格", group = level2Group, inline = "L2", tooltip = "价格大于0才生效")
+size_L2 = input.float(1.0, "开仓数量", minval=0.01, group = level2Group, inline = "L2")
+
+// --- 价格成交条件 3 ---
+level3Group = "价格成交条件 3"
+enable_L3 = input.bool(false, "启用", group = level3Group, inline = "L3")
+price_L3 = input.price(0.0, "成交价格", group = level3Group, inline = "L3", tooltip = "价格大于0才生效")
+size_L3 = input.float(1.0, "开仓数量", minval=0.01, group = level3Group, inline = "L3")
+
+
+// =============================================================================
+// 时间设置
+// =============================================================================
+timeGroup = '时间设置'
+resistanceStartTime = input.time(timestamp("2025-07-15 00:00:00"), "价格条件开始时间", group=timeGroup, tooltip="控制价格条件信号的起始时间，纺锤线信号不受此限制")
+timezone = input.string("GMT+8", "时区", options=["GMT-12", "GMT-11", "GMT-10", "GMT-9", "GMT-8", "GMT-7", "GMT-6", "GMT-5", "GMT-4", "GMT-3", "GMT-2", "GMT-1", "GMT+0", "GMT+1", "GMT+2", "GMT+3", "GMT+4", "GMT+5", "GMT+6", "GMT+7", "GMT+8", "GMT+9", "GMT+10", "GMT+11", "GMT+12"], group=timeGroup)
+enableSession1 = input.bool(true, "启用", group=timeGroup, inline="session1")
+timeSession1 = input.session("0800-1200", "交易时间段 1", group=timeGroup, inline="session1")
+enableSession2 = input.bool(true, "启用", group=timeGroup, inline="session2")
+timeSession2 = input.session("1300-1700", "交易时间段 2", group=timeGroup, inline="session2")
+enableSession3 = input.bool(true, "启用", group=timeGroup, inline="session3")
+timeSession3 = input.session("1900-2300", "交易时间段 3", group=timeGroup, inline="session3")
+enableSession4 = input.bool(true, "启用", group=timeGroup, inline="session4")
+timeSession4 = input.session("0000-0600", "交易时间段 4", group=timeGroup, inline="session4")
+enableSession5 = input.bool(false, "启用", group=timeGroup, inline="session5")
+timeSession5 = input.session("0000-0000", "交易时间段 5", group=timeGroup, inline="session5")
+enableSession6 = input.bool(false, "启用", group=timeGroup, inline="session6")
+timeSession6 = input.session("0000-0000", "交易时间段 6", group=timeGroup, inline="session6")
+enableSession7 = input.bool(false, "启用", group=timeGroup, inline="session7")
+timeSession7 = input.session("0000-0000", "交易时间段 7", group=timeGroup, inline="session7")
+enableSession8 = input.bool(false, "启用", group=timeGroup, inline="session8")
+timeSession8 = input.session("0000-0000", "交易时间段 8", group=timeGroup, inline="session8")
+enableSession9 = input.bool(false, "启用", group=timeGroup, inline="session9")
+timeSession9 = input.session("0000-0000", "交易时间段 9", group=timeGroup, inline="session9")
+enableSession10 = input.bool(false, "启用", group=timeGroup, inline="session10")
+timeSession10 = input.session("0000-0000", "交易时间段 10", group=timeGroup, inline="session10")
+enableSession11 = input.bool(false, "启用", group=timeGroup, inline="session11")
+timeSession11 = input.session("0000-0000", "交易时间段 11", group=timeGroup, inline="session11")
+enableSession12 = input.bool(false, "启用", group=timeGroup, inline="session12")
+timeSession12 = input.session("0000-0000", "交易时间段 12", group=timeGroup, inline="session12")
+enableSession13 = input.bool(false, "启用", group=timeGroup, inline="session13")
+timeSession13 = input.session("0000-0000", "交易时间段 13", group=timeGroup, inline="session13")
+enableSession14 = input.bool(false, "启用", group=timeGroup, inline="session14")
+timeSession14 = input.session("0000-0000", "交易时间段 14", group=timeGroup, inline="session14")
+enableSession15 = input.bool(false, "启用", group=timeGroup, inline="session15")
+timeSession15 = input.session("0000-0000", "交易时间段 15", group=timeGroup, inline="session15")
+enableSession16 = input.bool(false, "启用", group=timeGroup, inline="session16")
+timeSession16 = input.session("0000-0000", "交易时间段 16", group=timeGroup, inline="session16")
+enableSession17 = input.bool(false, "启用", group=timeGroup, inline="session17")
+timeSession17 = input.session("0000-0000", "交易时间段 17", group=timeGroup, inline="session17")
+enableSession18 = input.bool(false, "启用", group=timeGroup, inline="session18")
+timeSession18 = input.session("0000-0000", "交易时间段 18", group=timeGroup, inline="session18")
+enableSession19 = input.bool(false, "启用", group=timeGroup, inline="session19")
+timeSession19 = input.session("0000-0000", "交易时间段 19", group=timeGroup, inline="session19")
+enableSession20 = input.bool(false, "启用", group=timeGroup, inline="session20")
+timeSession20 = input.session("0000-0000", "交易时间段 20", group=timeGroup, inline="session20")
+
+
+// =============================================================================
+// 显示设置
+// =============================================================================
+infoLabal = '显示设置'
+showSpinInfo = input.bool(false, title = '显示纺锤线', group = infoLabal)
+label_color_neutral = input(color.gray, "Label Color Neutral", group = infoLabal)
+showTimeBackground = input.bool(false, "显示有效时间区间背景", group = infoLabal)
+showPriceLevelLines = input.bool(true, "显示价格条件线", group = infoLabal)
+showStrategyNotice = input.bool(true, "显示指标信息表格", group = infoLabal)
+
+
+// =============================================================================
+// 核心计算
+// =============================================================================
+
+// --- 状态变量 ---
+var bool longSignalTriggeredInCycle = false
+var bool shortSignalTriggeredInCycle = false
+var longConditionCount = array.new_int(3, 0)
+var shortConditionCount = array.new_int(3, 0)
+
+// --- 纺锤线计算 ---
+C_Len = 14
+C_DojiBodyPercent = 5.0
+C_BodyHi = math.max(close, open)
+C_BodyLo = math.min(close, open)
+C_Body = C_BodyHi - C_BodyLo
+C_WhiteBody = open < close
+C_BlackBody = open > close
+C_Range = high-low
+C_UpShadow = high - C_BodyHi
+C_DnShadow = C_BodyLo - low
+C_IsDojiBody = C_Range > 0 and C_Body <= C_Range * C_DojiBodyPercent / 100
+C_IsSpinningTop = C_DnShadow >= C_Range / 100 * 34.0 and C_UpShadow >= C_Range / 100 * 34.0 and not C_IsDojiBody
+C_SpinningTopWhite = C_IsSpinningTop and C_WhiteBody
+C_SpinningTopBlack = C_IsSpinningTop and C_BlackBody
+
+atrOffset = ta.atr(30) * 0.6
+
+if showSpinInfo and C_SpinningTopWhite
+    label.new(bar_index, low - atrOffset, text="STW", style=label.style_label_up, color = label_color_neutral, textcolor=color.white, tooltip = "白色纺锤线")
+if showSpinInfo and C_SpinningTopBlack
+    label.new(bar_index, low - atrOffset, text="STB", style=label.style_label_up, color = label_color_neutral, textcolor=color.white, tooltip = "黑色纺锤线")
+
+if C_SpinningTopWhite or C_SpinningTopBlack
+    longSignalTriggeredInCycle := false
+    shortSignalTriggeredInCycle := false
+
+bsSTW = ta.barssince(C_SpinningTopWhite)
+bsTTB = ta.barssince(C_SpinningTopBlack)
+var float whiteSpinClosePrice = na
+var float blackSpinClosePrice = na
+if C_SpinningTopWhite
+    whiteSpinClosePrice := close
+if C_SpinningTopBlack
+    blackSpinClosePrice := close
+
+// --- 时间条件检查 ---
+isInTradingSession() =>
+    session1 = enableSession1 ? time(timeframe.period, timeSession1, timezone) : na
+    session2 = enableSession2 ? time(timeframe.period, timeSession2, timezone) : na
+    session3 = enableSession3 ? time(timeframe.period, timeSession3, timezone) : na
+    session4 = enableSession4 ? time(timeframe.period, timeSession4, timezone) : na
+    session5 = enableSession5 ? time(timeframe.period, timeSession5, timezone) : na
+    session6 = enableSession6 ? time(timeframe.period, timeSession6, timezone) : na
+    session7 = enableSession7 ? time(timeframe.period, timeSession7, timezone) : na
+    session8 = enableSession8 ? time(timeframe.period, timeSession8, timezone) : na
+    session9 = enableSession9 ? time(timeframe.period, timeSession9, timezone) : na
+    session10 = enableSession10 ? time(timeframe.period, timeSession10, timezone) : na
+    session11 = enableSession11 ? time(timeframe.period, timeSession11, timezone) : na
+    session12 = enableSession12 ? time(timeframe.period, timeSession12, timezone) : na
+    session13 = enableSession13 ? time(timeframe.period, timeSession13, timezone) : na
+    session14 = enableSession14 ? time(timeframe.period, timeSession14, timezone) : na
+    session15 = enableSession15 ? time(timeframe.period, timeSession15, timezone) : na
+    session16 = enableSession16 ? time(timeframe.period, timeSession16, timezone) : na
+    session17 = enableSession17 ? time(timeframe.period, timeSession17, timezone) : na
+    session18 = enableSession18 ? time(timeframe.period, timeSession18, timezone) : na
+    session19 = enableSession19 ? time(timeframe.period, timeSession19, timezone) : na
+    session20 = enableSession20 ? time(timeframe.period, timeSession20, timezone) : na
+    not na(session1) or not na(session2) or not na(session3) or not na(session4) or not na(session5) or not na(session6) or not na(session7) or not na(session8) or not na(session9) or not na(session10) or not na(session11) or not na(session12) or not na(session13) or not na(session14) or not na(session15) or not na(session16) or not na(session17) or not na(session18) or not na(session19) or not na(session20)
+
+bgcolor(showTimeBackground and isInTradingSession() ? color.new(color.blue, 95) : na)
+
+isLastTenMinutes() => minute(time) >= 50
+priceLevelTimeCondition = isInTradingSession() and not isLastTenMinutes() and time >= resistanceStartTime
+spinningTimeConditionMet = isInTradingSession() and not isLastTenMinutes()
+
+// --- 交易条件判断 ---
+
+// - 纺锤线条件
+isAfterWhiteSpinBeforeBlack = bsSTW < bsTTB or (bsSTW >= 0 and na(bsTTB))
+isAfterBlackSpinBeforeWhite = bsTTB < bsSTW or (bsTTB >= 0 and na(bsSTW))
+
+longCondition_Spin = false
+if enableSpinningTopSignal and isAfterWhiteSpinBeforeBlack and not C_SpinningTopBlack and not longSignalTriggeredInCycle
+    hasNoLowerShadow = open == low
+    priceCondition = enableSpinningTopPriceCheck ? (not na(whiteSpinClosePrice) and open > whiteSpinClosePrice) : true
+    longCondition_Spin := C_WhiteBody and C_Body >= minBodySize and hasNoLowerShadow and spinningTimeConditionMet and priceCondition
+if longCondition_Spin
+    longSignalTriggeredInCycle := true
+
+shortCondition_Spin = false
+if enableSpinningTopSignal and isAfterBlackSpinBeforeWhite and not C_SpinningTopWhite and not shortSignalTriggeredInCycle
+    hasNoUpperShadow = open == high
+    priceCondition = enableSpinningTopPriceCheck ? (not na(blackSpinClosePrice) and open < blackSpinClosePrice) : true
+    shortCondition_Spin := C_BlackBody and C_Body >= minBodySize and hasNoUpperShadow and spinningTimeConditionMet and priceCondition
+if shortCondition_Spin
+    shortSignalTriggeredInCycle := true
+
+// - 价格成交条件
+longCondition_L1 = false
+longCondition_L2 = false
+longCondition_L3 = false
+shortCondition_L1 = false
+shortCondition_L2 = false
+shortCondition_L3 = false
+
+// Level 1 Logic
+if enable_L1 and price_L1 > 0 and priceLevelTimeCondition
+    if array.get(longConditionCount, 0) == 0
+        if C_WhiteBody and C_Body >= minBodySize and (open == low) and (open < price_L1 and (close - price_L1) / C_Body > 2/3)
+            longCondition_L1 := true
+            array.set(longConditionCount, 0, 1)
+    if array.get(shortConditionCount, 0) == 0
+        if C_BlackBody and C_Body >= minBodySize and (open == high) and (open > price_L1 and (price_L1 - close) / C_Body > 2/3)
+            shortCondition_L1 := true
+            array.set(shortConditionCount, 0, 1)
+
+// Level 2 Logic
+if enable_L2 and price_L2 > 0 and priceLevelTimeCondition
+    if array.get(longConditionCount, 1) == 0
+        if C_WhiteBody and C_Body >= minBodySize and (open == low) and (open < price_L2 and (close - price_L2) / C_Body > 2/3)
+            longCondition_L2 := true
+            array.set(longConditionCount, 1, 1)
+    if array.get(shortConditionCount, 1) == 0
+        if C_BlackBody and C_Body >= minBodySize and (open == high) and (open > price_L2 and (price_L2 - close) / C_Body > 2/3)
+            shortCondition_L2 := true
+            array.set(shortConditionCount, 1, 1)
+
+// Level 3 Logic
+if enable_L3 and price_L3 > 0 and priceLevelTimeCondition
+    if array.get(longConditionCount, 2) == 0
+        if C_WhiteBody and C_Body >= minBodySize and (open == low) and (open < price_L3 and (close - price_L3) / C_Body > 2/3)
+            longCondition_L3 := true
+            array.set(longConditionCount, 2, 1)
+    if array.get(shortConditionCount, 2) == 0
+        if C_BlackBody and C_Body >= minBodySize and (open == high) and (open > price_L3 and (price_L3 - close) / C_Body > 2/3)
+            shortCondition_L3 := true
+            array.set(shortConditionCount, 2, 1)
+
+// --- 绘图 ---
+canLong = tradingDirection == "做多"
+canShort = tradingDirection == "做空"
+
+// 绘制价格线
+if showPriceLevelLines and time >= resistanceStartTime
+    if enable_L1 and price_L1 > 0
+        line.new(bar_index-1, price_L1, bar_index, price_L1, color=color.new(color.red, 50), style=line.style_dashed, width=1)
+    if enable_L2 and price_L2 > 0
+        line.new(bar_index-1, price_L2, bar_index, price_L2, color=color.new(color.orange, 50), style=line.style_dashed, width=1)
+    if enable_L3 and price_L3 > 0
+        line.new(bar_index-1, price_L3, bar_index, price_L3, color=color.new(color.yellow, 50), style=line.style_dashed, width=1)
+
+// 绘制信号标签
+plotshape(longCondition_L1 or longCondition_L2 or longCondition_L3, title="价格做多", location=location.belowbar, color=color.green, style=shape.labelup, text="价多", textcolor=color.white, size=size.small)
+plotshape(longCondition_Spin, title="纺锤线做多", location=location.belowbar, color=color.lime, style=shape.labelup, text="纺多", textcolor=color.white, size=size.small)
+plotshape(shortCondition_L1 or shortCondition_L2 or shortCondition_L3, title="价格做空", location=location.abovebar, color=color.red, style=shape.labeldown, text="价空", textcolor=color.white, size=size.small)
+plotshape(shortCondition_Spin, title="纺锤线做空", location=location.abovebar, color=color.maroon, style=shape.labeldown, text="纺空", textcolor=color.white, size=size.small)
+
+
+// --- 警报 ---
+// <<< 修改：根据最新要求，强制使用alertcondition并设置简单的"long"或"short"消息 >>>
+// 注意：警报的触发方向仍然受 "交易设置" -> "警报方向" 的控制。
+
+// 做多警报条件
+alertcondition(condition=canLong and longCondition_Spin, title="纺锤线做多 (Spinning Top Long)", message="long")
+alertcondition(condition=canLong and (longCondition_L1 or longCondition_L2 or longCondition_L3), title="价格条件做多 (Price Level 1 Long)", message="long")
+
+// 做空警报条件
+alertcondition(condition=canShort and shortCondition_Spin, title="纺锤线做空 (Spinning Top Short)", message="short")
+alertcondition(condition=canShort and (shortCondition_L1 or shortCondition_L2 or shortCondition_L3), title="价格条件做空 (Price Level 1 Short)", message="short")
+
+
+// --- 指标信息表格 ---
+var table indicatorTable = table.new(position.top_right, 2, 4, bgcolor=color.white, border_width=1)
+if barstate.islast and showStrategyNotice
+    table.cell(indicatorTable, 0, 0, "指标信息", text_color=color.black, bgcolor=color.gray)
+    table.cell(indicatorTable, 1, 0, "", text_color=color.black, bgcolor=color.gray)
+    table.cell(indicatorTable, 0, 1, "当前状态", text_color=color.black)
+    table.cell(indicatorTable, 1, 1, "等待所有信号", text_color=color.blue)
+    table.cell(indicatorTable, 0, 2, "警报方向", text_color=color.black)
+    directionColor = tradingDirection == "做多" ? color.green : color.red
+    table.cell(indicatorTable, 1, 2, tradingDirection, text_color=directionColor)
+    table.cell(indicatorTable, 0, 3, "使用说明", text_color=color.black, bgcolor=color.new(color.blue, 90))
+    table.cell(indicatorTable, 1, 3, "📈 图表显示所有信号\n⚠️ 警报按设定方向触发", text_color=color.blue, bgcolor=color.new(color.blue, 90), text_size=size.small)
