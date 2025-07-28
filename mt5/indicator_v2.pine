@@ -10,6 +10,7 @@ indicator("MT5 Indicator (Multi-Level, Final 3, 20 Sessions)", overlay=true, max
 tradingGroup = '交易设置'
 tradingDirection = input.string("做多", "警报方向", options=["做多", "做空"], group=tradingGroup, tooltip="此选项仅过滤警报，图表上会显示所有信号")
 minBodySize = input.float(1.0, "最小实体长度", group=tradingGroup, tooltip="适用于所有信号的最小K线实体长度")
+positionMode = input.string('货币数', title = '仓位模式', options = ["货币数", "合约数"])
 
 // --- 纺锤线信号设置 ---
 spinningTopGroup = "纺锤线信号设置"
@@ -248,23 +249,43 @@ if showPriceLevelLines and time >= resistanceStartTime
         line.new(bar_index-1, price_L3, bar_index, price_L3, color=color.new(color.yellow, 50), style=line.style_dashed, width=1)
 
 // 绘制信号标签
-plotshape(longCondition_L1 or longCondition_L2 or longCondition_L3, title="价格做多", location=location.belowbar, color=color.green, style=shape.labelup, text="价多", textcolor=color.white, size=size.small)
-plotshape(longCondition_Spin, title="纺锤线做多", location=location.belowbar, color=color.lime, style=shape.labelup, text="纺多", textcolor=color.white, size=size.small)
-plotshape(shortCondition_L1 or shortCondition_L2 or shortCondition_L3, title="价格做空", location=location.abovebar, color=color.red, style=shape.labeldown, text="价空", textcolor=color.white, size=size.small)
-plotshape(shortCondition_Spin, title="纺锤线做空", location=location.abovebar, color=color.maroon, style=shape.labeldown, text="纺空", textcolor=color.white, size=size.small)
+plotshape(canLong and (longCondition_L1 or longCondition_L2 or longCondition_L3), title="价格做多", location=location.belowbar, color=color.green, style=shape.labelup, text="价多", textcolor=color.white, size=size.small)
+plotshape(canLong and longCondition_Spin, title="纺锤线做多", location=location.belowbar, color=color.lime, style=shape.labelup, text="纺多", textcolor=color.white, size=size.small)
+plotshape(canShort and (shortCondition_L1 or shortCondition_L2 or shortCondition_L3), title="价格做空", location=location.abovebar, color=color.red, style=shape.labeldown, text="价空", textcolor=color.white, size=size.small)
+plotshape(canShort and shortCondition_Spin, title="纺锤线做空", location=location.abovebar, color=color.maroon, style=shape.labeldown, text="纺空", textcolor=color.white, size=size.small)
 
 
-// --- 警报 ---
-// <<< 修改：根据最新要求，强制使用alertcondition并设置简单的"long"或"short"消息 >>>
-// 注意：警报的触发方向仍然受 "交易设置" -> "警报方向" 的控制。
+format_msg(isLong, pos, msg) =>
+    p = positionMode == '货币数' ? pos / close : pos
+    str.format('{0} {1} 仓位={2} 备注={3}', isLong ? "做多" : '做空', syminfo.ticker, p, msg)
+
+if canLong
+    if longCondition_Spin
+        alert(format_msg(true, positionSize_Spin, '纺锤线做多'))
+    if longCondition_L1
+        alert(format_msg(true, size_L1, '价格条件做多1'))
+    if longCondition_L2
+        alert(format_msg(true, size_L2, '价格条件做多2'))
+    if longCondition_L3
+        alert(format_msg(true, size_L3, '价格条件做多3'))
+
+if canShort
+    if shortCondition_Spin
+        alert(format_msg(false, positionSize_Spin, '纺锤线做空'))
+    if shortCondition_L1
+        alert(format_msg(false, size_L1, '价格条件做空1'))
+    if shortCondition_L2
+        alert(format_msg(false, size_L2, '价格条件做空2'))
+    if shortCondition_L3
+        alert(format_msg(false, size_L3, '价格条件做空3'))
 
 // 做多警报条件
-alertcondition(condition=canLong and longCondition_Spin, title="纺锤线做多 (Spinning Top Long)", message="long")
-alertcondition(condition=canLong and (longCondition_L1 or longCondition_L2 or longCondition_L3), title="价格条件做多 (Price Level 1 Long)", message="long")
+// alertcondition(condition=canLong and longCondition_Spin, title="纺锤线做多 (Spinning Top Long)", message="long")
+// alertcondition(condition=canLong and (longCondition_L1 or longCondition_L2 or longCondition_L3), title="价格条件做多 (Price Level 1 Long)", message="long")
 
 // 做空警报条件
-alertcondition(condition=canShort and shortCondition_Spin, title="纺锤线做空 (Spinning Top Short)", message="short")
-alertcondition(condition=canShort and (shortCondition_L1 or shortCondition_L2 or shortCondition_L3), title="价格条件做空 (Price Level 1 Short)", message="short")
+// alertcondition(condition=canShort and shortCondition_Spin, title="纺锤线做空 (Spinning Top Short)", message="short")
+// alertcondition(condition=canShort and (shortCondition_L1 or shortCondition_L2 or shortCondition_L3), title="价格条件做空 (Price Level 1 Short)", message="short")
 
 
 // --- 指标信息表格 ---
