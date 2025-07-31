@@ -51,7 +51,7 @@ def initialize_app():
         if not mt5_connector.connect():
             raise MT5Error("Failed to connect to MT5 terminal")
 
-        # Initialize trading manager (include custom_intervals from root config)
+        # Initialize trading manager
         trading_config = config['trading'].copy()
         trading_config['custom_intervals'] = config.get('custom_intervals', {})
         trading_manager = TradingManager(mt5_connector, trading_config)
@@ -78,16 +78,10 @@ def health_check():
         if mt5_connector and mt5_status:
             account_info = mt5_connector.get_account_info()
 
-        # Get trading hours status
-        trading_hours_status = None
-        if trading_manager:
-            trading_hours_status = trading_manager.get_trading_hours_status()
-
         return jsonify({
             'status': 'healthy' if mt5_status else 'unhealthy',
             'mt5_connected': mt5_status,
             'account_info': account_info,
-            'trading_hours': trading_hours_status,
             'timestamp': trading_manager.get_server_time() if trading_manager else None
         })
     except Exception as e:
@@ -106,35 +100,10 @@ def get_status():
         # Get account info
         account_info = trading_manager.get_account_info() if trading_manager else None
 
-        # Get trading hours status
-        trading_hours_status = None
-        if trading_manager:
-            trading_hours_status = trading_manager.get_trading_hours_status()
-
-        # Get custom intervals configuration
-        custom_intervals_info = None
-        if trading_manager and hasattr(trading_manager, 'trading_hours_manager'):
-            custom_intervals = trading_manager.trading_hours_manager.custom_intervals
-            if custom_intervals:
-                custom_intervals_info = {
-                    'total_count': len(custom_intervals),
-                    'intervals': {
-                        interval_id: {
-                            'name': interval.get('name', f'Interval {interval_id}'),
-                            'time_range': f"{interval.get('start_time', 'N/A')}-{interval.get('end_time', 'N/A')}",
-                            'timezone': interval.get('timezone', 'UTC'),
-                            'description': interval.get('description', '')
-                        }
-                        for interval_id, interval in custom_intervals.items()
-                    }
-                }
-
         return jsonify({
             'server_status': 'running',
             'mt5_connected': mt5_connector.is_connected() if mt5_connector else False,
             'account_info': account_info,
-            'trading_hours': trading_hours_status,
-            'custom_intervals': custom_intervals_info,
             'timestamp': trading_manager.get_server_time() if trading_manager else None
         })
     except Exception as e:

@@ -1,17 +1,19 @@
 # TradingView Webhook 配置示例
 
-本文档提供了在TradingView中配置webhook警报的详细示例，用于与MT5交易服务器集成。
+本文档提供了在 TradingView 中配置 webhook 警报的详细示例，用于与 MT5 交易服务器集成。
 
 ## 基础配置
 
 ### 1. 服务器地址设置
 
-在TradingView警报设置中，Webhook URL应该设置为：
+在 TradingView 警报设置中，Webhook URL 应该设置为：
+
 ```
 http://你的服务器IP:5000/webhook
 ```
 
 例如：
+
 - 本地测试: `http://127.0.0.1:5000/webhook`
 - 远程服务器: `http://192.168.1.100:5000/webhook`
 - 域名: `http://your-domain.com:5000/webhook`
@@ -20,20 +22,24 @@ http://你的服务器IP:5000/webhook
 
 支持三种消息格式：
 
-#### 格式1：纯中文字符串（推荐）
+#### 格式 1：纯中文字符串（推荐）
+
 直接在消息框中输入中文命令：
+
 ```
 开多 XAUUSD 仓位=0.1 备注=TradingView信号
 ```
 
-#### 格式2：JSON包装的中文格式
+#### 格式 2：JSON 包装的中文格式
+
 ```json
 {
   "message": "开多 XAUUSD 仓位=0.1 备注=TradingView信号"
 }
 ```
 
-#### 格式3：传统JSON格式
+#### 格式 3：传统 JSON 格式
+
 ```json
 {
   "action": "buy",
@@ -46,11 +52,13 @@ http://你的服务器IP:5000/webhook
 ## 中文格式详细说明
 
 ### 基础语法
+
 ```
 操作方向 交易品种 参数1=值1 参数2=值2 开关参数
 ```
 
 ### 操作方向
+
 - **开多、买入、做多** → 买入开仓
 - **开空、卖出、做空** → 卖出开仓
 - **平多** → 平多头仓位
@@ -59,6 +67,7 @@ http://你的服务器IP:5000/webhook
 - **全平** → 平所有仓位
 
 ### 参数说明
+
 - **仓位=0.1** 或 **数量=0.1** 或 **手数=0.1** → 交易量
 - **止损=3350.0** 或 **止损价=3350.0** → 止损价格
 - **止盈=3380.0** 或 **止盈价=3380.0** → 止盈价格
@@ -77,7 +86,7 @@ http://你的服务器IP:5000/webhook
 {{strategy.order.action == "buy" ? "开多" : "开空"}} {{ticker}} 仓位={{strategy.position_size}} 备注=策略信号
 ```
 
-### JSON格式动态变量
+### JSON 格式动态变量
 
 ```json
 {
@@ -107,16 +116,19 @@ http://你的服务器IP:5000/webhook
 ### 1. 简单买卖信号
 
 #### 中文格式买入信号
+
 ```
 开多 {{ticker}} 仓位=0.1 备注=买入信号价格{{close}}
 ```
 
 #### 中文格式卖出信号
+
 ```
 开空 {{ticker}} 仓位=0.1 备注=卖出信号价格{{close}}
 ```
 
-#### JSON格式买入信号
+#### JSON 格式买入信号
+
 ```json
 {
   "action": "buy",
@@ -126,7 +138,8 @@ http://你的服务器IP:5000/webhook
 }
 ```
 
-#### JSON格式卖出信号
+#### JSON 格式卖出信号
+
 ```json
 {
   "action": "sell",
@@ -139,11 +152,13 @@ http://你的服务器IP:5000/webhook
 ### 2. 带止损止盈的交易
 
 #### 中文格式
+
 ```
 开多 {{ticker}} 仓位=0.1 止损={{close * 0.99}} 止盈={{close * 1.02}} 备注=带止损止盈
 ```
 
-#### JSON格式
+#### JSON 格式
+
 ```json
 {
   "action": "buy",
@@ -158,16 +173,19 @@ http://你的服务器IP:5000/webhook
 ### 3. 平仓信号
 
 #### 中文格式平仓
+
 ```
 平仓 {{ticker}} 备注=平仓信号
 ```
 
 #### 中文格式全平
+
 ```
 全平 {{ticker}} 备注=紧急平仓
 ```
 
-#### JSON格式平仓特定品种
+#### JSON 格式平仓特定品种
+
 ```json
 {
   "action": "close",
@@ -176,13 +194,42 @@ http://你的服务器IP:5000/webhook
 }
 ```
 
-#### JSON格式平仓所有持仓
+#### JSON 格式平仓所有持仓
+
 ```json
 {
   "action": "close_all",
   "comment": "Close all positions"
 }
 ```
+
+### 5. 时间区间控制
+
+#### 中文格式时间区间控制
+
+```
+开启时间区间 开多 XAUUSD 仓位=0.1
+开启时间区间 开空 EURUSD 仓位=0.05
+开启时间区间 平多 XAUUSD
+开启时间区间 全平 XAUUSD
+```
+
+#### JSON 格式时间区间控制
+
+```json
+{
+  "action": "buy",
+  "symbol": "XAUUSD",
+  "volume": 0.1,
+  "enable_time_check": true
+}
+```
+
+**说明**：
+
+- 当包含"开启时间区间"或 `"enable_time_check": true` 时，系统会检查当前时间是否在配置的时间段内
+- 只有当前时间在 `custom_intervals` 配置的任一时间段内时，交易才会被执行
+- 如果不在时间段内，会返回错误信息
 
 ### 4. 修改持仓
 
@@ -196,19 +243,7 @@ http://你的服务器IP:5000/webhook
 }
 ```
 
-### 5. 时间区间控制
-
-#### 中文格式开启时间区间
-```
-开启时间区间
-```
-
-#### JSON格式开启时间区间
-```json
-{
-  "action": "enable_trading_hours"
-}
-```
+````
 
 #### 自定义时间段说明
 系统配置了3个自定义时间段，使用"开启时间区间"命令会同时启用所有时间段：
@@ -238,7 +273,7 @@ http://你的服务器IP:5000/webhook
   "tp": {{strategy.order.action}} == "buy" ? {{close}} * 1.02 : {{close}} * 0.98,
   "comment": "Conditional trade"
 }
-```
+````
 
 ### 2. 多时间框架信号
 
@@ -283,7 +318,7 @@ http://你的服务器IP:5000/webhook
 }
 ```
 
-### 2. RSI超买超卖策略
+### 2. RSI 超买超卖策略
 
 ```json
 {
@@ -372,14 +407,16 @@ http://你的服务器IP:5000/webhook
 
 ## 常见问题解决
 
-### 1. JSON格式错误
+### 1. JSON 格式错误
 
-确保JSON格式正确，常见错误：
+确保 JSON 格式正确，常见错误：
+
 - 缺少引号
 - 多余的逗号
 - 括号不匹配
 
 正确格式：
+
 ```json
 {
   "action": "buy",
@@ -391,12 +428,14 @@ http://你的服务器IP:5000/webhook
 ### 2. 动态变量问题
 
 确保动态变量格式正确：
+
 - 字符串变量需要引号: `"{{ticker}}"`
 - 数值变量不需要引号: `{{close}}`
 
 ### 3. 特殊字符处理
 
-避免在comment中使用特殊字符：
+避免在 comment 中使用特殊字符：
+
 ```json
 {
   "comment": "Simple comment without special chars"
@@ -412,7 +451,7 @@ http://你的服务器IP:5000/webhook
 
 ## 示例策略代码
 
-以下是一个简单的Pine Script策略示例，展示如何发送webhook：
+以下是一个简单的 Pine Script 策略示例，展示如何发送 webhook：
 
 ```pinescript
 //@version=5

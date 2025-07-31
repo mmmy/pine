@@ -1,15 +1,15 @@
 # MT5 Trading HTTP Server
 
-一个基于Python Flask的MT5交易HTTP服务器，可以接收TradingView webhook警报并执行MT5交易操作。
+一个基于 Python Flask 的 MT5 交易 HTTP 服务器，可以接收 TradingView webhook 警报并执行 MT5 交易操作。
 
 ## 功能特点
 
-- 🔗 **MT5集成**: 直接连接MetaTrader 5终端执行交易
-- 🌐 **HTTP API**: RESTful API接口，支持webhook和手动调用
-- 🔒 **安全认证**: API密钥认证和IP白名单功能
+- 🔗 **MT5 集成**: 直接连接 MetaTrader 5 终端执行交易
+- 🌐 **HTTP API**: RESTful API 接口，支持 webhook 和手动调用
+- 🔒 **安全认证**: API 密钥认证和 IP 白名单功能
 - 📊 **实时监控**: 账户信息、持仓查询、服务状态监控
 - 📝 **完整日志**: 详细的交易日志和错误记录
-- ⏰ **时间控制**: 可配置的交易时间段限制
+
 - 🛡️ **风险管理**: 交易量限制、滑点控制等安全措施
 
 ## 支持的交易操作
@@ -25,7 +25,7 @@
 
 - Python 3.7+
 - MetaTrader 5 终端
-- Windows 操作系统（MT5 Python API限制）
+- Windows 操作系统（MT5 Python API 限制）
 
 ### 2. 安装依赖
 
@@ -49,7 +49,7 @@ cp .env.example .env
 # 修改 config.yaml 中的MT5账户信息
 ```
 
-在 `config.yaml` 中配置你的MT5账户信息（支持多个账户）：
+在 `config.yaml` 中配置你的 MT5 账户信息（支持多个账户）：
 
 ```yaml
 mt5:
@@ -96,16 +96,18 @@ curl http://127.0.0.1:5000/health
 Invoke-RestMethod -Uri "http://127.0.0.1:5000/health"
 ```
 
-## API接口文档
+## API 接口文档
 
 ### 基础端点
 
 #### 健康检查
+
 ```http
 GET /health
 ```
 
 响应示例：
+
 ```json
 {
   "status": "healthy",
@@ -115,13 +117,15 @@ GET /health
 ```
 
 #### 服务状态
+
 ```http
 GET /status
 ```
 
-需要API密钥认证。
+需要 API 密钥认证。
 
 响应示例：
+
 ```json
 {
   "server_status": "running",
@@ -135,66 +139,29 @@ GET /status
     "server": "ForexTimeFXTM-Demo02",
     "trade_allowed": true
   },
-  "trading_hours": {
-    "enabled": false,
-    "trading_allowed": true,
-    "default_timezone": "UTC"
-  },
-  "custom_intervals": {
-    "total_count": 4,
-    "intervals": {
-      "interval1": {
-        "name": "自定义时段1",
-        "time_range": "08:00-16:00",
-        "timezone": "Europe/London",
-        "description": "欧洲交易时段"
-      },
-      "interval2": {
-        "name": "自定义时段2",
-        "time_range": "14:00-22:00",
-        "timezone": "America/New_York",
-        "description": "美洲交易时段"
-      },
-      "interval3": {
-        "name": "自定义时段3",
-        "time_range": "01:00-09:00",
-        "timezone": "GMT+8",
-        "description": "亚洲交易时段"
-      },
-      "interval4": {
-        "name": "自定义时段4",
-        "time_range": "13:00-15:00",
-        "timezone": "GMT+8",
-        "description": "亚洲交易时段"
-      }
-    }
-  },
+
   "timestamp": "2025-01-26T20:55:00"
 }
 ```
 
 **字段说明：**
+
 - `server_status`: 服务器运行状态
-- `mt5_connected`: MT5连接状态
-- `account_info`: MT5账户详细信息
-- `trading_hours`: 交易时间管理状态
-- `custom_intervals`: 自定义时间段配置
-  - `total_count`: 配置的时间段总数
-  - `intervals`: 各时间段详细信息
-    - `name`: 时间段名称
-    - `time_range`: 时间范围
-    - `timezone`: 时区
-    - `description`: 描述信息
+- `mt5_connected`: MT5 连接状态
+- `account_info`: MT5 账户详细信息
 
 #### 查询持仓
+
 ```http
 GET /positions?account_id=demo1
 ```
 
-需要API密钥认证。可选参数：
-- `account_id`: 指定账户ID，不指定则使用默认账户
+需要 API 密钥认证。可选参数：
+
+- `account_id`: 指定账户 ID，不指定则使用默认账户
 
 响应示例：
+
 ```json
 {
   "success": true,
@@ -205,11 +172,11 @@ GET /positions?account_id=demo1
       "symbol": "EURUSD",
       "type_name": "BUY",
       "volume": 0.1,
-      "price_open": 1.0850,
-      "price_current": 1.0860,
+      "price_open": 1.085,
+      "price_current": 1.086,
       "profit": 10.0,
-      "sl": 1.0800,
-      "tp": 1.0900
+      "sl": 1.08,
+      "tp": 1.09
     }
   ],
   "count": 1
@@ -218,14 +185,16 @@ GET /positions?account_id=demo1
 
 ### 交易端点
 
-#### Webhook交易
+#### Webhook 交易
+
 ```http
 POST /webhook
 ```
 
 支持三种请求格式：
 
-**格式1：传统JSON格式**
+**格式 1：传统 JSON 格式**
+
 ```http
 Content-Type: application/json
 
@@ -239,7 +208,8 @@ Content-Type: application/json
 }
 ```
 
-**格式2：JSON包装的中文格式**
+**格式 2：JSON 包装的中文格式**
+
 ```http
 Content-Type: application/json
 
@@ -248,7 +218,8 @@ Content-Type: application/json
 }
 ```
 
-**格式3：纯中文字符串格式（推荐）**
+**格式 3：纯中文字符串格式（推荐）**
+
 ```http
 Content-Type: text/plain
 
@@ -256,7 +227,9 @@ Content-Type: text/plain
 ```
 
 ### 中文格式说明：
+
 - **第一个词**：操作方向
+
   - 开多、买入、做多 → 买入
   - 开空、卖出、做空 → 卖出
   - 平多 → 平多头仓位
@@ -265,9 +238,10 @@ Content-Type: text/plain
   - 全平 → 平所有仓位
   - 修改 → 修改仓位
 
-- **第二个词**：交易品种（如XAUUSD、EURUSD等）
+- **第二个词**：交易品种（如 XAUUSD、EURUSD 等）
 
 - **后续参数**：中文=值的格式
+
   - 仓位=0.1 或 数量=0.1 或 手数=0.1
   - 止损=3350.0 或 止损价=3350.0
   - 止盈=3380.0 或 止盈价=3380.0
@@ -275,45 +249,47 @@ Content-Type: text/plain
   - 订单号=123456 或 票号=123456
   - 滑点=5 或 最大滑点=5
 
-
 - **开关参数**：只写中文名称，不带等号
   - 开启时间区间 允许滑点、强制平仓、部分平仓、立即执行等
 
 #### 手动交易
+
 ```http
 POST /trade
 Content-Type: application/json
 ```
 
-与webhook端点相同的请求格式。
+与 webhook 端点相同的请求格式。
 
 ### 交易参数说明
 
-| 参数 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| action | string | 是 | 交易动作: buy, sell, close, close_all, modify |
-| symbol | string | 是 | 交易品种，如 EURUSD |
-| volume | number | 否 | 交易量，默认使用配置中的默认值 |
-| sl | number | 否 | 止损价格 |
-| tp | number | 否 | 止盈价格 |
-| ticket | number | 否 | 持仓票号（平仓和修改时使用） |
-| comment | string | 否 | 交易备注 |
-| magic | number | 否 | 魔术数字 |
+| 参数    | 类型   | 必需 | 说明                                          |
+| ------- | ------ | ---- | --------------------------------------------- |
+| action  | string | 是   | 交易动作: buy, sell, close, close_all, modify |
+| symbol  | string | 是   | 交易品种，如 EURUSD                           |
+| volume  | number | 否   | 交易量，默认使用配置中的默认值                |
+| sl      | number | 否   | 止损价格                                      |
+| tp      | number | 否   | 止盈价格                                      |
+| ticket  | number | 否   | 持仓票号（平仓和修改时使用）                  |
+| comment | string | 否   | 交易备注                                      |
+| magic   | number | 否   | 魔术数字                                      |
 
 ### 交易动作详解
 
 #### 开仓 (buy/sell)
+
 ```json
 {
   "action": "buy",
   "symbol": "EURUSD",
   "volume": 0.1,
-  "sl": 1.0800,
-  "tp": 1.0900
+  "sl": 1.08,
+  "tp": 1.09
 }
 ```
 
 #### 平仓 (close)
+
 ```json
 {
   "action": "close",
@@ -323,6 +299,7 @@ Content-Type: application/json
 ```
 
 #### 全部平仓 (close_all)
+
 ```json
 {
   "action": "close_all",
@@ -331,28 +308,29 @@ Content-Type: application/json
 ```
 
 #### 修改持仓 (modify)
+
 ```json
 {
   "action": "modify",
   "symbol": "EURUSD",
   "ticket": 123456,
-  "sl": 1.0750,
-  "tp": 1.0950
+  "sl": 1.075,
+  "tp": 1.095
 }
 ```
 
-## TradingView Webhook配置
+## TradingView Webhook 配置
 
-### 1. 在TradingView中设置警报
+### 1. 在 TradingView 中设置警报
 
 1. 打开你的策略或指标
 2. 点击"创建警报"
 3. 在"通知"选项卡中，启用"Webhook URL"
 4. 输入你的服务器地址：`http://你的服务器IP:5000/webhook`
 
-### 2. Webhook消息格式
+### 2. Webhook 消息格式
 
-在TradingView警报的"消息"字段中使用JSON格式：
+在 TradingView 警报的"消息"字段中使用 JSON 格式：
 
 ```json
 {
@@ -365,7 +343,7 @@ Content-Type: application/json
 
 ### 3. 动态参数示例
 
-使用TradingView的动态变量：
+使用 TradingView 的动态变量：
 
 ```json
 {
@@ -379,9 +357,9 @@ Content-Type: application/json
 
 ## 安全配置
 
-### API密钥认证
+### API 密钥认证
 
-在 `config.yaml` 中设置API密钥：
+在 `config.yaml` 中设置 API 密钥：
 
 ```yaml
 server:
@@ -389,15 +367,15 @@ server:
     api_key: "your_secret_api_key_here"
 ```
 
-在请求头中包含API密钥：
+在请求头中包含 API 密钥：
 
 ```http
 X-API-Key: your_secret_api_key_here
 ```
 
-### IP白名单
+### IP 白名单
 
-限制允许访问的IP地址：
+限制允许访问的 IP 地址：
 
 ```yaml
 server:
@@ -410,43 +388,40 @@ server:
 
 ## 配置文件详解
 
-### MT5配置
+### MT5 配置
+
 ```yaml
 mt5:
-  terminal_path: ""  # MT5终端路径（可选）
+  terminal_path: "" # MT5终端路径（可选）
   account:
     login: 你的账户号
     password: "你的密码"
     server: "经纪商服务器"
   timeout:
-    connect: 30  # 连接超时（秒）
-    trade: 10    # 交易超时（秒）
+    connect: 30 # 连接超时（秒）
+    trade: 10 # 交易超时（秒）
 ```
 
 ### 交易配置
+
 ```yaml
 trading:
-  default_volume: 0.1      # 默认交易量
-  max_volume: 10.0         # 最大交易量
-  min_volume: 0.01         # 最小交易量
-  max_slippage: 3          # 最大滑点
-  magic_number: 12345      # 魔术数字
-  allowed_symbols: []      # 允许的交易品种（空=全部）
-  
-  # 交易时间限制
-  trading_hours:
-    enabled: false
-    start_time: "09:00"
-    end_time: "17:00"
-    timezone: "UTC"
+  default_volume: 0.1 # 默认交易量
+  max_volume: 10.0 # 最大交易量
+  min_volume: 0.01 # 最小交易量
+  max_slippage: 3 # 最大滑点
+  magic_number: 12345 # 魔术数字
+  allowed_symbols: [] # 允许的交易品种（空=全部）
+
 ```
 
 ### 日志配置
+
 ```yaml
 logging:
   level: "INFO"
   file: "mt5_server.log"
-  max_size: 10485760  # 10MB
+  max_size: 10485760 # 10MB
   backup_count: 5
   console: true
 ```
@@ -455,13 +430,15 @@ logging:
 
 ### 常见问题
 
-1. **MT5连接失败**
-   - 确保MT5终端正在运行
-   - 检查账户信息是否正确
-   - 确认经纪商允许API交易
+1. **MT5 连接失败**
 
-2. **API认证失败**
-   - 检查API密钥是否正确
+   - 确保 MT5 终端正在运行
+   - 检查账户信息是否正确
+   - 确认经纪商允许 API 交易
+
+2. **API 认证失败**
+
+   - 检查 API 密钥是否正确
    - 确认请求头格式正确
 
 3. **交易失败**
@@ -490,7 +467,7 @@ python start_server.py --debug --log-level DEBUG
 
 ### 手动测试
 
-可以使用curl或PowerShell测试API：
+可以使用 curl 或 PowerShell 测试 API：
 
 ```bash
 # 测试纯文本webhook

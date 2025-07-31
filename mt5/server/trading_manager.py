@@ -5,11 +5,11 @@ Handles trade execution and management operations.
 
 import MetaTrader5 as mt5
 import logging
+import re
 from typing import Dict, Any, Optional, List
-from datetime import datetime, time
+from datetime import datetime, time, timezone, timedelta
 import pytz
 from functools import wraps
-from trading_hours_manager import TradingHoursManager
 from utils.exceptions import TradingError, ValidationError, ConnectionError
 from utils.validators import validate_trade_parameters, sanitize_comment
 from utils.logger import log_trade_operation, log_error_with_context
@@ -60,7 +60,7 @@ class TradingManager:
     def __init__(self, mt5_connector, config: Dict[str, Any]):
         """
         Initialize trading manager.
-        
+
         Args:
             mt5_connector: MT5Connector instance
             config: Trading configuration dictionary
@@ -69,34 +69,129 @@ class TradingManager:
         self.config = config
         self.logger = logging.getLogger('mt5_server.trading')
 
-        # Trading hours manager
-        self.trading_hours_manager = TradingHoursManager(config)
+        # Get custom intervals from config
+        self.custom_intervals = config.get('custom_intervals', {})
+
+    @staticmethod
+    def _parse_timezone(timezone_str: str):
+        """
+        Parse timezone string, supporting both standard names and GMT+/-N format.
+
+        Args:
+            timezone_str: Timezone string (e.g., 'Asia/Shanghai', 'GMT+8', 'UTC-5')
+
+        Returns:
+            timezone object
+        """
+        if not timezone_str:
+            return pytz.UTC
+
+        # Check for GMT+/-N or UTC+/-N format
+        gmt_pattern = r'^(GMT|UTC)([+-])(\d{1,2})$'
+        match = re.match(gmt_pattern, timezone_str.upper())
+
+        if match:
+            prefix, sign, hours = match.groups()
+            hours = int(hours)
+
+            # Create timezone offset
+            if sign == '+':
+                offset = timedelta(hours=hours)
+            else:
+                offset = timedelta(hours=-hours)
+
+            return timezone(offset)
+
+        # Try standard timezone names
+        try:
+            return pytz.timezone(timezone_str)
+        except pytz.exceptions.UnknownTimeZoneError:
+            raise ValidationError(f"Invalid timezone: {timezone_str}. Use standard names like 'Asia/Shanghai' or GMT+/-N format like 'GMT+8'")
+
+    def _is_trading_time_allowed(self) -> bool:
+        """
+        Check if trading is currently allowed based on custom intervals.
+
+        Returns:
+            True if trading is allowed, False otherwise
+        """
+        if not self.custom_intervals:
+            self.logger.warning("No custom intervals configured for time check")
+            return False
+
+        try:
+            self.logger.info(f"Checking {len(self.custom_intervals)} custom intervals")
+
+            # Check each custom interval
+            for interval_id, interval in self.custom_intervals.items():
+                self.logger.info(f"Checking interval {interval_id}: {interval['name']}")
+
+                # Get current time in the interval's timezone
+                tz = self._parse_timezone(interval['timezone'])
+                current_time = datetime.now(tz).time()
+
+                self.logger.info(f"Current time in {interval['timezone']}: {current_time}")
+
+                # Parse interval times
+                start_time = datetime.strptime(interval['start_time'], "%H:%M").time()
+                end_time = datetime.strptime(interval['end_time'], "%H:%M").time()
+
+                self.logger.info(f"Interval time: {start_time} - {end_time}")
+
+                # Check if current time is within this interval
+                if start_time <= end_time:
+                    # Same day trading hours (e.g., 09:00 - 17:00)
+                    is_within = start_time <= current_time <= end_time
+                    self.logger.info(f"Same day check: {start_time} <= {current_time} <= {end_time} = {is_within}")
+                    if is_within:
+                        self.logger.info(f"Trading allowed in interval {interval_id} ({interval['name']})")
+                        return True
+                else:
+                    # Overnight trading hours (e.g., 22:00 - 06:00)
+                    is_within = current_time >= start_time or current_time <= end_time
+                    self.logger.info(f"Overnight check: {current_time} >= {start_time} OR {current_time} <= {end_time} = {is_within}")
+                    if is_within:
+                        self.logger.info(f"Trading allowed in interval {interval_id} ({interval['name']})")
+                        return True
+
+            # No intervals allow trading at current time
+            self.logger.warning("Trading not allowed at current time - no intervals matched")
+            return False
+
+        except Exception as e:
+            self.logger.error(f"Error checking trading hours: {e}")
+            # If there's an error, deny trading to be safe
+            return False
         
     def execute_webhook_trade(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute trade based on webhook payload.
-        
+
         Args:
             payload: Webhook payload
-            
+
         Returns:
             Trade execution result
         """
         try:
             action = payload['action'].lower()
-
-            # Handle trading hours commands first (they don't need symbol)
-            if action == 'enable_trading_hours':
-                return self.trading_hours_manager.handle_trading_hours_command(action, payload)
-
-            # For regular trading commands, get symbol and check trading hours
             symbol = payload['symbol'].upper()
 
-            # Check if trading is allowed at current time for regular trading actions
-            if action in ['buy', 'sell', 'close', 'close_all', 'modify']:
-                if not self.trading_hours_manager.is_trading_allowed():
-                    raise TradingError("Trading not allowed at current time due to trading hours restrictions")
-            
+            # Check if time interval check is enabled
+            if payload.get('enable_time_check'):
+                self.logger.info(f"Time interval check enabled for {action} {symbol}")
+                is_allowed = self._is_trading_time_allowed()
+                self.logger.info(f"Time check result: {is_allowed}")
+                if not is_allowed:
+                    error_msg = {
+                        'success': False,
+                        'error': 'Trading not allowed at current time due to time interval restrictions',
+                        'message': 'Current time is outside configured trading intervals',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    self.logger.warning(f"Time check blocked trading: {error_msg}")
+                    return error_msg
+
             # Route to appropriate handler
             if action in ['buy', 'sell']:
                 return self._execute_market_order(payload)
@@ -108,7 +203,7 @@ class TradingManager:
                 return self._modify_position(payload)
             else:
                 raise ValidationError(f"Unsupported action: {action}")
-                
+
         except Exception as e:
             log_error_with_context(self.logger, e, "Webhook trade execution failed", payload=payload)
             raise
@@ -495,14 +590,7 @@ class TradingManager:
 
         return volume
 
-    def get_trading_hours_status(self) -> Dict[str, Any]:
-        """
-        Get trading hours status.
 
-        Returns:
-            Trading hours status dictionary
-        """
-        return self.trading_hours_manager.get_status()
 
     def get_positions(self) -> List[Dict[str, Any]]:
         """

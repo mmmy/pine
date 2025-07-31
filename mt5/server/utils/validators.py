@@ -99,10 +99,6 @@ def validate_webhook_payload(payload: Dict[str, Any], webhook_config: Dict[str, 
         action = payload.get('action', '').lower()
         required_fields = webhook_config.get('required_fields', [])
 
-        # Time interval commands don't require symbol
-        if action == 'enable_trading_hours':
-            required_fields = [field for field in required_fields if field != 'symbol']
-
         for field in required_fields:
             if field not in payload:
                 result['valid'] = False
@@ -113,8 +109,7 @@ def validate_webhook_payload(payload: Dict[str, Any], webhook_config: Dict[str, 
         if 'action' in payload:
             action = payload['action'].lower()
             valid_actions = [
-                'buy', 'sell', 'close', 'close_all', 'modify',
-                'enable_trading_hours'
+                'buy', 'sell', 'close', 'close_all', 'modify'
             ]
             if action not in valid_actions:
                 result['valid'] = False
@@ -257,18 +252,4 @@ def sanitize_comment(comment: str) -> str:
     return sanitized[:255]
 
 
-def validate_time_range(start_time: str, end_time: str) -> bool:
-    """
-    Validate time range format (HH:MM).
-    
-    Args:
-        start_time: Start time string
-        end_time: End time string
-        
-    Returns:
-        True if format is valid, False otherwise
-    """
-    time_pattern = r'^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
-    
-    return (bool(re.match(time_pattern, start_time)) and 
-            bool(re.match(time_pattern, end_time)))
+

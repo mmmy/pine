@@ -4,7 +4,7 @@
 mt5:
   # MT5 terminal path (optional, auto-detect if not specified)
   terminal_path: ""
-  
+
   # MT5 account credentials (支持多个账户)
   accounts:
     # 账户ID: 账户配置
@@ -24,71 +24,64 @@ mt5:
 
   # 默认账户ID (如果webhook中没有指定账户)
   default_account: "yqtest2"
-  
+
   # Connection timeout settings
   timeout:
-    connect: 30  # Connection timeout in seconds
-    trade: 10    # Trade operation timeout in seconds
+    connect: 30 # Connection timeout in seconds
+    trade: 10 # Trade operation timeout in seconds
 
 # HTTP Server Settings
 server:
-  host: "127.0.0.1"  # Server host
-  port: 5000         # Server port
-  debug: false       # Debug mode (set to true for development)
-  
+  host: "127.0.0.1" # Server host
+  port: 5000 # Server port
+  debug: false # Debug mode (set to true for development)
+
   # API Security
   security:
-    api_key: ""      # API key for authentication (leave empty to disable)
-    allowed_ips: []  # List of allowed IP addresses (empty = allow all)
+    api_key: "" # API key for authentication (leave empty to disable)
+    allowed_ips: [] # List of allowed IP addresses (empty = allow all)
 
 # Trading Settings
 trading:
   # Default trading parameters
-  default_volume: 0.1      # Default lot size
-  max_volume: 10.0         # Maximum allowed lot size
-  min_volume: 0.01         # Minimum allowed lot size
-  
+  default_volume: 0.1 # Default lot size
+  max_volume: 10.0 # Maximum allowed lot size
+  min_volume: 0.01 # Minimum allowed lot size
+
   # Risk management
-  max_slippage: 3          # Maximum slippage in points
-  magic_number: 12345      # Magic number for trades
-  
+  max_slippage: 3 # Maximum slippage in points
+  magic_number: 12345 # Magic number for trades
+
   # Allowed symbols (empty = allow all)
   allowed_symbols: []
-  
-  # Trading time restrictions
-  trading_hours:
-    enabled: false
-    start_time: "09:00"    # Trading start time (24h format)
-    end_time: "17:00"      # Trading end time (24h format)
-    timezone: "UTC"        # Timezone for trading hours
 
 # Logging Settings
 logging:
-  level: "INFO"            # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  file: "mt5_server.log"   # Log file path
-  max_size: 10485760       # Max log file size in bytes (10MB)
-  backup_count: 5          # Number of backup log files to keep
-  
+  level: "INFO" # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "mt5_server.log" # Log file path
+  max_size: 10485760 # Max log file size in bytes (10MB)
+  backup_count: 5 # Number of backup log files to keep
+
   # Console logging
-  console: true            # Enable console logging
-  
+  console: true # Enable console logging
+
   # Log format
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # Webhook Settings
 webhook:
   # TradingView webhook validation
-  validate_source: false   # Validate webhook source
-  
+  validate_source: false # Validate webhook source
+
   # Webhook timeout
-  timeout: 30              # Webhook processing timeout in seconds
-  
+  timeout: 30 # Webhook processing timeout in seconds
+
   # Required fields in webhook payload
   required_fields:
-    - "action"             # buy, sell, close, etc.
-    - "symbol"             # trading symbol
-  
+    - "action" # buy, sell, close, etc.
+    - "symbol" # trading symbol
+
   # Optional fields with defaults
   optional_fields:
-    volume: 0.1            # default volume if not specified
-    comment: "Webhook Trade"  # default comment
+    volume: 0.1 # default volume if not specified
+    comment: "Webhook Trade" # default comment

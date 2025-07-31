@@ -14,8 +14,7 @@ trading:
   # Allowed symbols (empty = allow all)
   allowed_symbols: []
   
-# 自定义时间段配置 (通过 "开启时间区间" 控制)
-# 默认关闭，只能通过webhook命令开启/关闭
+# 自定义时间段配置 (保留配置但不使用)
 custom_intervals:
   interval1:
     name: "自定义时段1"
