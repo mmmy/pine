@@ -4,6 +4,7 @@ strategy("Scheduled Trading Strategy", overlay=true, default_qty_type=strategy.f
 // 策略参数
 debugMode = input.bool(false, title="Debug Mode")
 enableStrategy = input.bool(true, title="Enable Strategy")
+positionMode = input.string("固定数量", title="仓位模式", options=["固定数量", "固定金额"])
 
 // 交易信号定义
 // 做多 = 开多仓, 平多 = 平多仓, 做空 = 开空仓, 平空 = 平空仓
@@ -31,23 +32,23 @@ if barstate.isfirst
     // array.push(tradeSignals, "平多")
     // array.push(tradeSizes, 50.0)
 
-        // Trading time: 2025-07-09 10:30:00+08:00, Direction: 做多, Quantity: 0.7
-    array.push(tradeTimes, timestamp("2025-07-09 10:30:00 GMT+8"))
+        // Trading time: 2025-07-30 10:30:00+08:00, Direction: 做多, Quantity: 0.7
+    array.push(tradeTimes, timestamp("2025-07-30 10:30:00 GMT+8"))
     array.push(tradeSignals, "做多")
     array.push(tradeSizes, 0.7)
 
-    // Trading time: 2025-07-09 14:15:00+08:00, Direction: 平多, Quantity: 0.6
-    array.push(tradeTimes, timestamp("2025-07-09 14:15:00 GMT+8"))
+    // Trading time: 2025-07-30 14:15:00+08:00, Direction: 平多, Quantity: 0.6
+    array.push(tradeTimes, timestamp("2025-07-30 14:15:00 GMT+8"))
     array.push(tradeSignals, "平多")
     array.push(tradeSizes, 0.6)
 
-    // Trading time: 2025-07-09 16:45:00+08:00, Direction: 做空, Quantity: 1
-    array.push(tradeTimes, timestamp("2025-07-09 16:45:00 GMT+8"))
+    // Trading time: 2025-07-30 16:45:00+08:00, Direction: 做空, Quantity: 1
+    array.push(tradeTimes, timestamp("2025-07-30 16:45:00 GMT+8"))
     array.push(tradeSignals, "做空")
     array.push(tradeSizes, 1)
 
-    // Trading time: 2025-07-10 16:45:00+08:00, Direction: 平空, Quantity: 0.9
-    array.push(tradeTimes, timestamp("2025-07-10 16:45:00 GMT+8"))
+    // Trading time: 2025-07-30 16:45:00+08:00, Direction: 平空, Quantity: 0.9
+    array.push(tradeTimes, timestamp("2025-07-30 16:45:00 GMT+8"))
     array.push(tradeSignals, "平空")
     array.push(tradeSizes, 0.9)
 
@@ -70,7 +71,8 @@ if enableStrategy
         if not array.get(tradeExecuted, i)
             targetTime = array.get(tradeTimes, i)
             signal = array.get(tradeSignals, i)
-            size = array.get(tradeSizes, i)
+            sizeData = array.get(tradeSizes, i)
+            size = positionMode == "固定数量" ? sizeData : sizeData / close
             
             // 检查当前时间是否已经穿过目标时间
             if time >= targetTime
@@ -117,17 +119,20 @@ if enableStrategy
                     label.new(bar_index, low, "平空\n" + str.tostring(size), color=color.orange, style=label.style_label_up, size=size.small)
 
 // 显示策略状态
-var table infoTable = table.new(position.top_right, 2, 6, bgcolor=color.white, border_width=1)
+var table infoTable = table.new(position.top_right, 2, 7, bgcolor=color.white, border_width=1)
 
 if barstate.islast
     table.cell(infoTable, 0, 0, "策略状态", text_color=color.black, bgcolor=color.gray)
     table.cell(infoTable, 1, 0, enableStrategy ? "启用" : "禁用", text_color=color.black)
     
-    table.cell(infoTable, 0, 1, "当前时间", text_color=color.black, bgcolor=color.gray)
-    table.cell(infoTable, 1, 1, str.format_time(timenow, timezone = 'UTC+8'), text_color=color.black)
+    table.cell(infoTable, 0, 1, "仓位模式", text_color=color.black, bgcolor=color.gray)
+    table.cell(infoTable, 1, 1, positionMode, text_color=color.black)
     
-    table.cell(infoTable, 0, 2, "计划交易数", text_color=color.black, bgcolor=color.gray)
-    table.cell(infoTable, 1, 2, str.tostring(array.size(tradeTimes)), text_color=color.black)
+    table.cell(infoTable, 0, 2, "当前时间", text_color=color.black, bgcolor=color.gray)
+    table.cell(infoTable, 1, 2, str.format_time(timenow, timezone = 'UTC+8'), text_color=color.black)
+    
+    table.cell(infoTable, 0, 3, "计划交易数", text_color=color.black, bgcolor=color.gray)
+    table.cell(infoTable, 1, 3, str.tostring(array.size(tradeTimes)), text_color=color.black)
     
     // 统计已执行的交易
     executedCount = 0
@@ -135,12 +140,12 @@ if barstate.islast
         if array.get(tradeExecuted, i)
             executedCount += 1
     
-    table.cell(infoTable, 0, 3, "已执行交易", text_color=color.black, bgcolor=color.gray)
-    table.cell(infoTable, 1, 3, str.tostring(executedCount), text_color=color.black)
+    table.cell(infoTable, 0, 4, "已执行交易", text_color=color.black, bgcolor=color.gray)
+    table.cell(infoTable, 1, 4, str.tostring(executedCount), text_color=color.black)
     
-    table.cell(infoTable, 0, 4, "当前仓位", text_color=color.black, bgcolor=color.gray)
-    table.cell(infoTable, 1, 4, str.tostring(strategy.position_size), text_color=color.black)
+    table.cell(infoTable, 0, 5, "当前仓位", text_color=color.black, bgcolor=color.gray)
+    table.cell(infoTable, 1, 5, str.tostring(strategy.position_size), text_color=color.black)
     
-    table.cell(infoTable, 0, 5, "未实现盈亏", text_color=color.black, bgcolor=color.gray)
-    table.cell(infoTable, 1, 5, str.tostring(strategy.openprofit), text_color=color.black)
+    table.cell(infoTable, 0, 6, "未实现盈亏", text_color=color.black, bgcolor=color.gray)
+    table.cell(infoTable, 1, 6, str.tostring(strategy.openprofit), text_color=color.black)
 
