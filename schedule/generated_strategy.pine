@@ -7,14 +7,14 @@ enableStrategy = input.bool(true, title="Enable Strategy")
 positionMode = input.string("固定数量", title="仓位模式", options=["固定数量", "固定金额"])
 
 // 交易信号定义
-// 做多 = 开多仓, 平多 = 平多仓, 做空 = 开空仓, 平空 = 平空仓
+// 做多 = 开多仓, 平多 = 平多仓, 做空 = 开空仓, 平空 = 平空仓, 全平多 = 平所有多仓, 全平空 = 平所有空仓
 var array<int> tradeTimes = array.new<int>()
 var array<string> tradeSignals = array.new<string>()
 var array<float> tradeSizes = array.new<float>()
 
 // 初始化交易数组 - 用户可以在这里配置交易计划
 // 时间格式: timestamp (可以通过 timestamp("2024-01-01 09:30:00") 获取)
-// 信号: "做多"=开多仓, "平多"=平多仓, "做空"=开空仓, "平空"=平空仓
+// 信号: "做多"=开多仓, "平多"=平多仓, "做空"=开空仓, "平空"=平空仓, "全平多"=平所有多仓, "全平空"=平所有空仓
 // 仓位大小: 正数表示数量
 
 // 示例交易计划 - 用户需要根据实际需求修改这些值
@@ -51,6 +51,16 @@ if barstate.isfirst
     array.push(tradeTimes, timestamp("2025-07-30 16:45:00 GMT+8"))
     array.push(tradeSignals, "平空")
     array.push(tradeSizes, 0.9)
+
+    // Trading time: 2025-07-31 16:45:00+08:00, Direction: 全平多, Quantity: 0
+    array.push(tradeTimes, timestamp("2025-07-31 16:45:00 GMT+8"))
+    array.push(tradeSignals, "全平多")
+    array.push(tradeSizes, 0)
+
+    // Trading time: 2025-08-01 16:45:00+08:00, Direction: 全平空, Quantity: 0
+    array.push(tradeTimes, timestamp("2025-08-01 16:45:00 GMT+8"))
+    array.push(tradeSignals, "全平空")
+    array.push(tradeSizes, 0)
 
     
 
@@ -105,6 +115,22 @@ if enableStrategy
                         closeSize = math.min(size, math.abs(strategy.position_size))
                         strategy.order("Close_Short_" + str.tostring(i), strategy.long, qty=closeSize, comment="#" + str.tostring(i + 1) + " " + "定时平空 " + str.format_time(targetTime, timezone = 'UTC+8'))
                 
+                else if signal == "全平多"  // 全平多
+                    if debugMode
+                        log.info("执行全平多订单: 时间={0}", targetTime)
+                    
+                    // 全平多：关闭所有多头仓位
+                    if strategy.position_size > 0
+                        strategy.order("Close_All_Long_" + str.tostring(i), strategy.short, qty=strategy.position_size, comment="#" + str.tostring(i + 1) + " " + "全平多 " + str.format_time(targetTime, timezone = 'UTC+8'))
+                
+                else if signal == "全平空"  // 全平空
+                    if debugMode
+                        log.info("执行全平空订单: 时间={0}", targetTime)
+                    
+                    // 全平空：关闭所有空头仓位
+                    if strategy.position_size < 0
+                        strategy.order("Close_All_Short_" + str.tostring(i), strategy.long, qty=math.abs(strategy.position_size), comment="#" + str.tostring(i + 1) + " " + "全平空 " + str.format_time(targetTime, timezone = 'UTC+8'))
+                
                 // 标记为已执行
                 array.set(tradeExecuted, i, true)
                 
@@ -117,6 +143,10 @@ if enableStrategy
                     label.new(bar_index, high, "做空\n" + str.tostring(size), color=color.red, style=label.style_label_down, size=size.small)
                 else if signal == "平空"
                     label.new(bar_index, low, "平空\n" + str.tostring(size), color=color.orange, style=label.style_label_up, size=size.small)
+                else if signal == "全平多"
+                    label.new(bar_index, high, "全平多\n" + str.tostring(strategy.position_size), color=color.yellow, style=label.style_label_down, size=size.small)
+                else if signal == "全平空"
+                    label.new(bar_index, low, "全平空\n" + str.tostring(math.abs(strategy.position_size)), color=color.purple, style=label.style_label_up, size=size.small)
 
 // 显示策略状态
 var table infoTable = table.new(position.top_right, 2, 7, bgcolor=color.white, border_width=1)
