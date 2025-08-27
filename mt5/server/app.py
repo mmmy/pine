@@ -7,6 +7,7 @@ A Flask-based HTTP server for executing MT5 trades via webhook calls.
 import os
 import sys
 import logging
+import time
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -131,6 +132,7 @@ def get_positions():
         return jsonify({'error': str(e)}), 500
 
 
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """Handle TradingView webhook requests."""
@@ -200,6 +202,14 @@ def webhook():
         if 'account_id' in payload:
             del payload['account_id']
 
+        # 计算到下个分钟结束需要等待的秒数
+        now = datetime.now()
+        seconds_to_next_minute = 60 - now.second + 60  # 下个分钟的00秒
+        logger.info(f"Current time: {now.strftime('%H:%M:%S')}, waiting {seconds_to_next_minute} seconds")
+        
+        # 等待到下个分钟结束
+        time.sleep(seconds_to_next_minute)
+        
         # Execute trade
         result = trading_manager.execute_webhook_trade(payload)
 
