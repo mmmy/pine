@@ -202,9 +202,8 @@ def webhook():
         if 'account_id' in payload:
             del payload['account_id']
 
-        # 计算到下个分钟结束需要等待的秒数
         now = datetime.now()
-        seconds_to_next_minute = 60 - now.second + 60  # 下个分钟的00秒
+        seconds_to_next_minute = 60 - now.second #+ 60  # 下个分钟的00秒
         logger.info(f"Current time: {now.strftime('%H:%M:%S')}, waiting {seconds_to_next_minute} seconds")
         
         # 等待到下个分钟结束
